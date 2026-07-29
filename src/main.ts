@@ -1,8 +1,9 @@
 import { Notice, Plugin } from "obsidian";
 import { ModalFormsApi } from "./api";
+import { isDataviewAvailable } from "./core/dataview";
 import * as formsRepo from "./core/forms";
 import { defaultSettings, parseSettings } from "./core/settings";
-import type { FormDefinition, PluginSettings } from "./core/types";
+import type { EditorContext, FormDefinition, PluginSettings } from "./core/types";
 import { ModalFormsSettingTab } from "./settings/SettingsTab";
 import { FormMetaModal } from "./ui/FormMetaModal";
 
@@ -46,6 +47,17 @@ export default class ModalFormsLitePlugin extends Plugin {
     async updateSettings(patch: Partial<PluginSettings>): Promise<void> {
         this.settings = { ...this.settings, ...patch };
         await this.saveSettings();
+    }
+
+    /**
+     * Собирается заново на каждое открытие редактора: и настройки, и наличие
+     * Dataview могли поменяться с прошлого раза.
+     */
+    editorContext(): EditorContext {
+        return {
+            allowDataview: this.settings.dataviewEnabled && isDataviewAvailable(this.app),
+            confirmDiscard: !this.settings.skipDiscardConfirm,
+        };
     }
 
     // === Операции над формами ===

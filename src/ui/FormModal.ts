@@ -9,9 +9,14 @@ import { FolderSuggest } from "./FolderSuggest";
 import { MultiValueField } from "./MultiValueField";
 import { NoteSuggest } from "./NoteSuggest";
 
-export interface AttachmentFolders {
+export interface FormRuntime {
     imageFolder: string;
     fileFolder: string;
+    /**
+     * Пока выключено, поля Dataview показываются обычным вводом и никакой
+     * пользовательский код не исполняется.
+     */
+    dataviewEnabled: boolean;
 }
 
 /**
@@ -27,7 +32,7 @@ export class FormModal extends Modal {
     constructor(
         app: App,
         private form: FormDefinition,
-        private folders: AttachmentFolders,
+        private runtime: FormRuntime,
         private resolve: (result: FormResult) => void,
         initial: Partial<FormData> = {},
     ) {
@@ -167,6 +172,12 @@ export class FormModal extends Modal {
                 setting.addText((text) => {
                     if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
+
+                    if (!this.runtime.dataviewEnabled) {
+                        text.setPlaceholder("Поля Dataview отключены в настройках");
+                        return;
+                    }
+
                     new DataviewSuggest(this.app, text.inputEl, {
                         query: input.query,
                         fieldName: field.name,
@@ -279,7 +290,7 @@ export class FormModal extends Modal {
             info.setText("Сохраняю…");
 
             try {
-                const folder = isImage ? this.folders.imageFolder : this.folders.fileFolder;
+                const folder = isImage ? this.runtime.imageFolder : this.runtime.fileFolder;
                 const path = await saveAttachment(this.app, file, folder);
                 this.setValue(field.name, toWikiLink(path));
                 info.setText(path);

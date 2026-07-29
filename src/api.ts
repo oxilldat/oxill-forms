@@ -1,4 +1,5 @@
 import { App } from "obsidian";
+import { isDataviewAvailable } from "./core/dataview";
 import { findForm } from "./core/forms";
 import { FormResult } from "./core/FormResult";
 import type { FormData } from "./core/FormResult";
@@ -56,7 +57,12 @@ export class ModalFormsApi {
             new FormModal(
                 this.app,
                 definition,
-                { imageFolder: settings.imageFolder, fileFolder: settings.fileFolder },
+                {
+                    imageFolder: settings.imageFolder,
+                    fileFolder: settings.fileFolder,
+                    dataviewEnabled:
+                        settings.dataviewEnabled && isDataviewAvailable(this.app),
+                },
                 resolve,
                 options.values ?? {},
             ).open();

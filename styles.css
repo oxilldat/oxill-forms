@@ -49,6 +49,10 @@
     min-height: 5rem;
 }
 
+.mfl-setting-disabled .setting-item-name {
+    color: var(--text-muted);
+}
+
 /* === Окно подтверждения === */
 
 .mfl-confirm-modal {

@@ -101,6 +101,7 @@ export class FormListModal extends Modal {
     private editFields(form: FormDefinition): void {
         new FormEditorModal(this.app, {
             form,
+            context: this.plugin.editorContext(),
             onSave: async (edited, originalName) => {
                 await this.plugin.upsertForm(edited, originalName);
                 this.renderList();

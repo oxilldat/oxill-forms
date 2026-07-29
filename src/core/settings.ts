@@ -7,6 +7,8 @@ export function defaultSettings(): PluginSettings {
         // папок не хотим — пусть решает владелец хранилища.
         imageFolder: "",
         fileFolder: "",
+        skipDiscardConfirm: false,
+        dataviewEnabled: false,
     };
 }
 
@@ -43,6 +45,8 @@ export function parseSettings(raw: unknown): PluginSettings {
         forms,
         imageFolder: asString(raw.imageFolder, defaults.imageFolder),
         fileFolder: asString(raw.fileFolder, defaults.fileFolder),
+        skipDiscardConfirm: raw.skipDiscardConfirm === true,
+        dataviewEnabled: raw.dataviewEnabled === true,
     };
 }
 

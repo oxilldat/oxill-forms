@@ -1,12 +1,13 @@
 import { App, Modal, Setting, setIcon } from "obsidian";
 import { createField, moveField, removeFieldAt, validateFields } from "../core/fields";
 import { INPUT_TYPE_LABELS } from "../core/types";
-import type { FieldDefinition, FormDefinition } from "../core/types";
+import type { EditorContext, FieldDefinition, FormDefinition } from "../core/types";
 import { ConfirmModal } from "./ConfirmModal";
 import { FieldEditorModal } from "./FieldEditorModal";
 
 interface FormEditorOptions {
     form: FormDefinition;
+    context: EditorContext;
     onSave: (form: FormDefinition, originalName: string) => void;
 }
 
@@ -64,6 +65,7 @@ export class FormEditorModal extends Modal {
         new FieldEditorModal(this.app, {
             field: createField(this.draft.fields),
             otherFields: this.draft.fields,
+            context: this.options.context,
             isNew: true,
             onSubmit: (field) => {
                 this.draft.fields.push(field);
@@ -76,6 +78,7 @@ export class FormEditorModal extends Modal {
         new FieldEditorModal(this.app, {
             field,
             otherFields: this.draft.fields.filter((other) => other !== field),
+            context: this.options.context,
             onSubmit: (edited) => {
                 this.draft.fields[index] = edited;
                 this.renderFields();
@@ -150,7 +153,7 @@ export class FormEditorModal extends Modal {
      * не сохранены — сначала спрашиваем, потому что терять их молча нельзя.
      */
     close(): void {
-        if (this.mayClose || !this.isDirty()) {
+        if (this.mayClose || !this.options.context.confirmDiscard || !this.isDirty()) {
             super.close();
             return;
         }

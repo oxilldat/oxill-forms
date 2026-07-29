@@ -2,7 +2,12 @@ import { App, Modal, Setting } from "obsidian";
 import { isDataviewAvailable } from "../core/dataview";
 import { defaultInputFor, validateField, withSource } from "../core/fields";
 import { INPUT_TYPE_LABELS } from "../core/types";
-import type { FieldDefinition, InputTypeName, SelectOption } from "../core/types";
+import type {
+    EditorContext,
+    FieldDefinition,
+    InputTypeName,
+    SelectOption,
+} from "../core/types";
 import { ConfirmModal } from "./ConfirmModal";
 import { FolderSuggest } from "./FolderSuggest";
 import { restrictToLatin } from "./restrictToLatin";
@@ -11,6 +16,7 @@ interface FieldEditorOptions {
     field: FieldDefinition;
     /** Остальные поля формы — по ним проверяется уникальность идентификатора. */
     otherFields: FieldDefinition[];
+    context: EditorContext;
     isNew?: boolean;
     onSubmit: (field: FieldDefinition) => void;
 }
@@ -81,6 +87,14 @@ export class FieldEditorModal extends Modal {
 
         new Setting(contentEl).setName("Тип").addDropdown((dropdown) => {
             for (const [type, label] of Object.entries(INPUT_TYPE_LABELS)) {
+                // Dataview прячем, пока он не включён в настройках. Поле, уже
+                // имеющее этот тип, оставляем — иначе список показал бы не то,
+                // что на самом деле сохранено.
+                const hidden =
+                    type === "dataview" &&
+                    !this.options.context.allowDataview &&
+                    this.draft.input.type !== "dataview";
+                if (hidden) continue;
                 dropdown.addOption(type, label);
             }
             dropdown.setValue(this.draft.input.type).onChange((value) => {
@@ -315,7 +329,7 @@ export class FieldEditorModal extends Modal {
 
     /** Как и в редакторе формы: несохранённые правки не теряем молча. */
     close(): void {
-        if (this.mayClose || !this.isDirty()) {
+        if (this.mayClose || !this.options.context.confirmDiscard || !this.isDirty()) {
             super.close();
             return;
         }
