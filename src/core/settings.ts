@@ -1,13 +1,12 @@
 import type { FieldDefinition, FormDefinition, InputType, PluginSettings } from "./types";
 
-export const DEFAULT_IMAGE_FOLDER = "Вложения/Картинки";
-export const DEFAULT_FILE_FOLDER = "Вложения/Файлы";
-
 export function defaultSettings(): PluginSettings {
     return {
         forms: [],
-        imageFolder: DEFAULT_IMAGE_FOLDER,
-        fileFolder: DEFAULT_FILE_FOLDER,
+        // Пустой путь означает корень хранилища. Навязывать свою структуру
+        // папок не хотим — пусть решает владелец хранилища.
+        imageFolder: "",
+        fileFolder: "",
     };
 }
 

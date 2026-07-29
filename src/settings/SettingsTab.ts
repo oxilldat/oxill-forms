@@ -51,6 +51,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
     /**
      * Папку можно выбрать из существующих или вписать несуществующую —
      * тогда она будет создана при первой загрузке вложения.
+     * Пустое поле означает корень хранилища.
      */
     private renderFolderSetting(
         name: string,
@@ -62,7 +63,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
             .setName(name)
             .setDesc(description)
             .addText((text) => {
-                text.setPlaceholder("Вложения")
+                text.setPlaceholder("Корень хранилища")
                     .setValue(value)
                     .onChange(async (entered) => {
                         await save(entered.trim());
