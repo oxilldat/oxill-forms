@@ -58,6 +58,15 @@ export class FormListModal extends Modal {
         new Setting(container)
             .setName(form.title)
             .setDesc(description)
+            .addToggle((toggle) =>
+                toggle
+                    .setTooltip("Команда «Заполнить» в палитре команд")
+                    .setValue(form.command === true)
+                    .onChange(async (value) => {
+                        await this.plugin.setFormCommand(form.name, value);
+                        this.renderList();
+                    }),
+            )
             .addExtraButton((button) =>
                 button
                     .setIcon("pencil")

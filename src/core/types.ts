@@ -30,6 +30,8 @@ export type MultiValueTypeName = "multiselect" | "tag";
 export type InputType =
     | { type: "text" }
     | { type: "textarea" }
+    | { type: "email" }
+    | { type: "tel" }
     | { type: "number" }
     | { type: "slider"; min: number; max: number; step: number }
     | { type: "toggle" }
@@ -47,6 +49,26 @@ export type InputType =
 
 export type InputTypeName = InputType["type"];
 
+/** Условия, по которым поле может показываться или прятаться. */
+export type ConditionKind =
+    | "isSet"
+    | "equals"
+    | "contains"
+    | "startsWith"
+    | "endsWith"
+    | "above"
+    | "below"
+    | "isTrue"
+    | "isFalse";
+
+export interface FieldCondition {
+    /** Идентификатор поля, от которого зависит видимость. */
+    field: string;
+    kind: ConditionKind;
+    /** Значение для сравнения. Для isSet, isTrue и isFalse не нужно. */
+    value?: string | number;
+}
+
 export interface FieldDefinition {
     /** Ключ в результате формы. Уникален в пределах формы. */
     name: string;
@@ -54,6 +76,13 @@ export interface FieldDefinition {
     label?: string;
     description?: string;
     required?: boolean;
+    /**
+     * Служебное поле: в форме не рисуется, но значение можно передать через
+     * `openForm(..., { values })`, и оно попадёт в результат.
+     */
+    hidden?: boolean;
+    /** Если задано — поле показывается только при выполнении условия. */
+    condition?: FieldCondition;
     input: InputType;
 }
 
@@ -62,6 +91,8 @@ export interface FormDefinition {
     name: string;
     /** Заголовок модального окна. */
     title: string;
+    /** Добавить команду «Заполнить: …» в палитру команд Obsidian. */
+    command?: boolean;
     fields: FieldDefinition[];
 }
 
@@ -102,6 +133,8 @@ export interface EditorContext {
 export const INPUT_TYPE_LABELS: Record<InputTypeName, string> = {
     text: "Текст",
     textarea: "Многострочный текст",
+    email: "Электронная почта",
+    tel: "Телефон",
     number: "Число",
     slider: "Ползунок",
     toggle: "Переключатель",

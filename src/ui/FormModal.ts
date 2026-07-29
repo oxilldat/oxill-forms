@@ -1,5 +1,6 @@
 import { App, Modal, Setting } from "obsidian";
 import { IMAGE_ACCEPT, isAllowedImage, saveAttachment, toWikiLink } from "../core/attachments";
+import { conditionMet } from "../core/conditions";
 import { FormResult } from "../core/FormResult";
 import type { FieldValue, FormData } from "../core/FormResult";
 import { noteOptions, vaultTags } from "../core/vault";
@@ -28,6 +29,8 @@ export class FormModal extends Modal {
     private values: FormData = {};
     private errorEl: HTMLElement | null = null;
     private answered = false;
+    /** Строки полей с условием — их приходится показывать и скрывать на ходу. */
+    private conditionalRows: { field: FieldDefinition; el: HTMLElement }[] = [];
 
     constructor(
         app: App,
@@ -57,8 +60,12 @@ export class FormModal extends Modal {
         contentEl.createEl("h3", { text: this.form.title, cls: "mfl-title" });
 
         for (const field of this.form.fields) {
+            // Скрытое поле не рисуем вовсе, но значение из values сохраняем —
+            // оно уйдёт в результат, для этого такие поля и нужны.
+            if (field.hidden) continue;
             this.renderField(contentEl, field);
         }
+        this.refreshVisibility();
 
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 
@@ -87,6 +94,7 @@ export class FormModal extends Modal {
         const setting = new Setting(container).setName(field.label?.trim() || field.name);
         if (field.description) setting.setDesc(field.description);
         if (field.required) setting.nameEl.addClass("mfl-required");
+        if (field.condition) this.conditionalRows.push({ field, el: setting.settingEl });
 
         const preset = this.values[field.name];
         const input = field.input;
@@ -95,6 +103,15 @@ export class FormModal extends Modal {
             case "text":
             case "textarea":
                 this.renderTextLike(setting, field, input.type === "textarea", preset);
+                break;
+
+            case "email":
+            case "tel":
+                setting.addText((text) => {
+                    text.inputEl.type = input.type;
+                    if (preset !== undefined) text.setValue(String(preset));
+                    text.onChange((value) => this.setValue(field.name, value));
+                });
                 break;
 
             case "number":
@@ -306,14 +323,32 @@ export class FormModal extends Modal {
     private setValue(name: string, value: FieldValue): void {
         this.values[name] = value;
         if (this.errorEl) this.errorEl.setText("");
+        this.refreshVisibility();
     }
 
-    /** Пустые значения в результат не попадают — так чище frontmatter. */
+    /** Выполнено ли условие показа. Поля без условия видны всегда. */
+    private isShown(field: FieldDefinition): boolean {
+        if (!field.condition) return true;
+        return conditionMet(field.condition, this.values[field.condition.field]);
+    }
+
+    private refreshVisibility(): void {
+        for (const row of this.conditionalRows) {
+            row.el.toggleClass("mfl-hidden", !this.isShown(row.field));
+        }
+    }
+
+    /**
+     * Пустые значения в результат не попадают — так чище frontmatter.
+     * Скрытые условием поля тоже: пользователь эту ветку не выбрал, и её
+     * данные были бы мусором.
+     */
     private collectData(): FormData {
         const data: FormData = {};
         for (const field of this.form.fields) {
             const value = this.values[field.name];
             if (value === undefined || this.isEmpty(value)) continue;
+            if (!this.isShown(field)) continue;
             data[field.name] = value;
         }
         return data;
@@ -321,7 +356,10 @@ export class FormModal extends Modal {
 
     private submit(): void {
         const missing = this.form.fields.filter(
-            (field) => field.required && this.isEmpty(this.values[field.name]),
+            (field) =>
+                field.required &&
+                this.isShown(field) &&
+                this.isEmpty(this.values[field.name]),
         );
         if (missing.length > 0) {
             const names = missing.map((field) => field.label?.trim() || field.name).join(", ");

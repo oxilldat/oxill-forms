@@ -1,4 +1,11 @@
-import type { FieldDefinition, FormDefinition, InputType, PluginSettings } from "./types";
+import type {
+    ConditionKind,
+    FieldCondition,
+    FieldDefinition,
+    FormDefinition,
+    InputType,
+    PluginSettings,
+} from "./types";
 
 export function defaultSettings(): PluginSettings {
     return {
@@ -63,7 +70,10 @@ function parseForm(raw: unknown): FormDefinition | null {
         const field = parseField(candidate);
         if (field && !fields.some((f) => f.name === field.name)) fields.push(field);
     }
-    return { name, title, fields };
+
+    const form: FormDefinition = { name, title, fields };
+    if (raw.command === true) form.command = true;
+    return form;
 }
 
 function parseField(raw: unknown): FieldDefinition | null {
@@ -78,13 +88,50 @@ function parseField(raw: unknown): FieldDefinition | null {
     if (typeof raw.label === "string") field.label = raw.label;
     if (typeof raw.description === "string") field.description = raw.description;
     if (raw.required === true) field.required = true;
+    if (raw.hidden === true) field.hidden = true;
+
+    const condition = parseCondition(raw.condition);
+    if (condition) field.condition = condition;
+
     return field;
+}
+
+function parseCondition(raw: unknown): FieldCondition | null {
+    if (!isRecord(raw)) return null;
+
+    const field = asString(raw.field).trim();
+    if (field === "") return null;
+
+    const kind = raw.kind;
+    if (!isConditionKind(kind)) return null;
+
+    const condition: FieldCondition = { field, kind };
+    if (typeof raw.value === "string" || typeof raw.value === "number") {
+        condition.value = raw.value;
+    }
+    return condition;
+}
+
+function isConditionKind(value: unknown): value is ConditionKind {
+    return (
+        value === "isSet" ||
+        value === "equals" ||
+        value === "contains" ||
+        value === "startsWith" ||
+        value === "endsWith" ||
+        value === "above" ||
+        value === "below" ||
+        value === "isTrue" ||
+        value === "isFalse"
+    );
 }
 
 function parseInput(raw: Record<string, unknown>): InputType | null {
     switch (raw.type) {
         case "text":
         case "textarea":
+        case "email":
+        case "tel":
         case "number":
         case "toggle":
         case "date":

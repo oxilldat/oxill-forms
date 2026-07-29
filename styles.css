@@ -49,6 +49,17 @@
     min-height: 5rem;
 }
 
+/* Поле, скрытое невыполненным условием. */
+.mfl-hidden {
+    display: none;
+}
+
+/* Строки условия показа — подчинённые, поэтому со сдвигом и без границы. */
+.mfl-condition {
+    border-top: none;
+    padding: 0.2rem 0 0.2rem 1rem;
+}
+
 .mfl-setting-disabled .setting-item-name {
     color: var(--text-muted);
 }

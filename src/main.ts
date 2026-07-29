@@ -1,4 +1,4 @@
-import { Notice, Plugin } from "obsidian";
+import { App, Notice, Plugin } from "obsidian";
 import { ModalFormsApi } from "./api";
 import { isDataviewAvailable } from "./core/dataview";
 import * as formsRepo from "./core/forms";
@@ -13,9 +13,16 @@ declare global {
     }
 }
 
+/** Внутренний реестр команд Obsidian — в публичных типах его нет. */
+interface CommandRegistry {
+    commands?: { removeCommand?: (id: string) => void };
+}
+
 export default class ModalFormsLitePlugin extends Plugin {
     settings: PluginSettings = defaultSettings();
     api!: ModalFormsApi;
+    /** Имена форм, для которых сейчас зарегистрирована команда. */
+    private formCommands = new Set<string>();
 
     async onload(): Promise<void> {
         this.settings = parseSettings(await this.loadData());
@@ -32,6 +39,8 @@ export default class ModalFormsLitePlugin extends Plugin {
             name: "Создать форму",
             callback: () => this.openCreateFormModal(),
         });
+
+        this.syncFormCommands();
     }
 
     onunload(): void {
@@ -70,16 +79,82 @@ export default class ModalFormsLitePlugin extends Plugin {
     async upsertForm(form: FormDefinition, originalName?: string): Promise<void> {
         this.settings.forms = formsRepo.upsertForm(this.settings.forms, form, originalName);
         await this.saveSettings();
+        this.syncFormCommands();
     }
 
     async removeForm(name: string): Promise<void> {
         this.settings.forms = formsRepo.removeForm(this.settings.forms, name);
         await this.saveSettings();
+        this.syncFormCommands();
     }
 
     async duplicateForm(name: string): Promise<void> {
         this.settings.forms = formsRepo.duplicateForm(this.settings.forms, name);
         await this.saveSettings();
+        this.syncFormCommands();
+    }
+
+    /** Включает или выключает команду формы в палитре. */
+    async setFormCommand(name: string, enabled: boolean): Promise<void> {
+        const form = formsRepo.findForm(this.settings.forms, name);
+        if (!form) return;
+        await this.upsertForm({ ...form, command: enabled }, name);
+    }
+
+    // === Команды форм ===
+
+    /**
+     * Приводит набор зарегистрированных команд в соответствие с настройками.
+     * Вызывается после любой правки форм: переименование или снятие галочки
+     * иначе оставило бы в палитре команду-призрак.
+     */
+    private syncFormCommands(): void {
+        const wanted = new Set(
+            this.settings.forms.filter((form) => form.command === true).map((form) => form.name),
+        );
+
+        for (const name of [...this.formCommands]) {
+            if (!wanted.has(name)) this.removeFormCommand(name);
+        }
+        for (const name of wanted) {
+            if (!this.formCommands.has(name)) this.addFormCommand(name);
+        }
+    }
+
+    private addFormCommand(name: string): void {
+        const form = formsRepo.findForm(this.settings.forms, name);
+        if (!form) return;
+
+        this.addCommand({
+            id: `fill-${name}`,
+            name: `Заполнить: ${form.title}`,
+            // editorCallback — команда видна только когда открыт редактор:
+            // результат вставляется по месту курсора, без заметки некуда.
+            editorCallback: (editor) => {
+                this.api.openForm(name).then((result) => {
+                    if (!result.ok) return;
+                    editor.replaceSelection(result.asDataview());
+                });
+            },
+        });
+        this.formCommands.add(name);
+    }
+
+    /**
+     * Публичного способа убрать команду у Plugin нет, а перерегистрация с тем
+     * же идентификатором её не удаляет. Пользуемся внутренним реестром, но
+     * аккуратно: если его не окажется, честно говорим про перезагрузку.
+     */
+    private removeFormCommand(name: string): void {
+        this.formCommands.delete(name);
+
+        const registry = (this.app as App & CommandRegistry).commands;
+        const fullId = `${this.manifest.id}:fill-${name}`;
+        if (typeof registry?.removeCommand === "function") {
+            registry.removeCommand(fullId);
+            return;
+        }
+        new Notice("Команда исчезнет из палитры после перезапуска Obsidian");
     }
 
     openCreateFormModal(): void {

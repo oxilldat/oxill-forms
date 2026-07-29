@@ -1,8 +1,14 @@
 import { App, Modal, Setting } from "obsidian";
+import {
+    CONDITION_LABELS,
+    conditionNeedsValue,
+    conditionsFor,
+} from "../core/conditions";
 import { isDataviewAvailable } from "../core/dataview";
 import { defaultInputFor, validateField, withSource } from "../core/fields";
 import { INPUT_TYPE_LABELS } from "../core/types";
 import type {
+    ConditionKind,
     EditorContext,
     FieldDefinition,
     InputTypeName,
@@ -31,6 +37,7 @@ export class FieldEditorModal extends Modal {
     private readonly snapshot: string;
     private mayClose = false;
     private optionsEl: HTMLElement | null = null;
+    private conditionEl: HTMLElement | null = null;
     private errorEl: HTMLElement | null = null;
 
     constructor(
@@ -82,8 +89,23 @@ export class FieldEditorModal extends Modal {
         new Setting(contentEl).setName("Обязательное").addToggle((toggle) =>
             toggle.setValue(this.draft.required === true).onChange((value) => {
                 this.draft.required = value;
+                this.clearError();
             }),
         );
+
+        new Setting(contentEl)
+            .setName("Скрытое")
+            .setDesc(
+                "В форме не показывается. Значение передаётся из кода через " +
+                    "openForm(..., { values }) и попадает в результат",
+            )
+            .addToggle((toggle) =>
+                toggle.setValue(this.draft.hidden === true).onChange((value) => {
+                    this.draft.hidden = value;
+                    this.clearError();
+                    this.renderCondition();
+                }),
+            );
 
         new Setting(contentEl).setName("Тип").addDropdown((dropdown) => {
             for (const [type, label] of Object.entries(INPUT_TYPE_LABELS)) {
@@ -107,6 +129,9 @@ export class FieldEditorModal extends Modal {
 
         this.optionsEl = contentEl.createDiv();
         this.renderInputOptions();
+
+        this.conditionEl = contentEl.createDiv();
+        this.renderCondition();
 
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 
@@ -220,6 +245,114 @@ export class FieldEditorModal extends Modal {
                 }),
             );
         }
+    }
+
+    /**
+     * Условие показа. Зависеть можно только от полей, объявленных выше в
+     * форме, — иначе на момент проверки значения ещё нет.
+     */
+    private renderCondition(): void {
+        const container = this.conditionEl;
+        if (!container) return;
+        container.empty();
+
+        if (this.draft.hidden) return;
+
+        const candidates = this.options.otherFields;
+        if (candidates.length === 0) {
+            new Setting(container)
+                .setName("Показывать поле")
+                .setDesc("Условие можно задать, когда в форме есть другие поля");
+            return;
+        }
+
+        const condition = this.draft.condition;
+
+        new Setting(container)
+            .setName("Показывать поле")
+            .addDropdown((dropdown) => {
+                dropdown.addOption("always", "Всегда");
+                dropdown.addOption("conditional", "При условии");
+                dropdown.setValue(condition ? "conditional" : "always").onChange((value) => {
+                    if (value === "always") {
+                        delete this.draft.condition;
+                    } else {
+                        const first = candidates[0];
+                        if (!first) return;
+                        const kinds = conditionsFor(first.input.type);
+                        this.draft.condition = {
+                            field: first.name,
+                            kind: kinds[0] ?? "isSet",
+                        };
+                    }
+                    this.clearError();
+                    this.renderCondition();
+                });
+            });
+
+        if (!condition) return;
+
+        const dependency =
+            candidates.find((field) => field.name === condition.field) ?? candidates[0];
+        if (!dependency) return;
+
+        const kinds = conditionsFor(dependency.input.type);
+
+        new Setting(container).setClass("mfl-condition").setName("Когда поле").addDropdown(
+            (dropdown) => {
+                for (const field of candidates) {
+                    dropdown.addOption(field.name, field.label?.trim() || field.name);
+                }
+                dropdown.setValue(dependency.name).onChange((value) => {
+                    const next = candidates.find((field) => field.name === value);
+                    if (!next) return;
+                    const allowed = conditionsFor(next.input.type);
+                    // Условия зависят от типа: при смене поля старое могло стать
+                    // неприменимым, поэтому берём первое подходящее.
+                    condition.field = value;
+                    if (!allowed.includes(condition.kind)) {
+                        condition.kind = allowed[0] ?? "isSet";
+                        delete condition.value;
+                    }
+                    this.clearError();
+                    this.renderCondition();
+                });
+            },
+        );
+
+        new Setting(container).setClass("mfl-condition").setName("Условие").addDropdown(
+            (dropdown) => {
+                for (const kind of kinds) {
+                    dropdown.addOption(kind, CONDITION_LABELS[kind]);
+                }
+                dropdown.setValue(condition.kind).onChange((value) => {
+                    condition.kind = value as ConditionKind;
+                    if (!conditionNeedsValue(condition.kind)) delete condition.value;
+                    this.clearError();
+                    this.renderCondition();
+                });
+            },
+        );
+
+        if (!conditionNeedsValue(condition.kind)) return;
+
+        const numeric =
+            dependency.input.type === "number" || dependency.input.type === "slider";
+
+        new Setting(container).setClass("mfl-condition").setName("Значение").addText((text) => {
+            if (numeric) text.inputEl.type = "number";
+            text.setValue(condition.value === undefined ? "" : String(condition.value)).onChange(
+                (entered) => {
+                    if (numeric) {
+                        const parsed = Number(entered);
+                        condition.value = Number.isFinite(parsed) ? parsed : 0;
+                    } else {
+                        condition.value = entered;
+                    }
+                    this.clearError();
+                },
+            );
+        });
     }
 
     private renderFolderPicker(

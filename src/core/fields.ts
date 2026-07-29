@@ -48,6 +48,8 @@ export function defaultInputFor(type: InputTypeName): InputType {
             return { type: "dataview", query: "" };
         case "text":
         case "textarea":
+        case "email":
+        case "tel":
         case "number":
         case "toggle":
         case "date":
@@ -112,6 +114,23 @@ export function validateField(field: FieldDefinition, others: FieldDefinition[])
         if (input.step <= 0) return "Шаг ползунка должен быть больше нуля";
         if (input.step > input.max - input.min) return "Шаг больше всего диапазона";
     }
+
+    // Скрытое поле пользователь не заполнит, поэтому обязательным быть не может.
+    if (field.hidden && field.required) {
+        return "Скрытое поле не может быть обязательным";
+    }
+    if (field.hidden && field.condition) {
+        return "У скрытого поля условие показа ничего не меняет";
+    }
+
+    if (field.condition) {
+        const dependencyName = field.condition.field;
+        if (dependencyName === name) return "Поле не может зависеть от себя";
+        if (!others.some((other) => other.name === dependencyName)) {
+            return `Поле «${dependencyName}», от которого зависит показ, не найдено`;
+        }
+    }
+
     return null;
 }
 
