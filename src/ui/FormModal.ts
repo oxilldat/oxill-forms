@@ -4,6 +4,7 @@ import { FormResult } from "../core/FormResult";
 import type { FieldValue, FormData } from "../core/FormResult";
 import { noteOptions, vaultTags } from "../core/vault";
 import type { FieldDefinition, FormDefinition, SelectOption } from "../core/types";
+import { DataviewSuggest } from "./DataviewSuggest";
 import { FolderSuggest } from "./FolderSuggest";
 import { MultiValueField } from "./MultiValueField";
 import { NoteSuggest } from "./NoteSuggest";
@@ -160,6 +161,22 @@ export class FormModal extends Modal {
                 // Список тегов считаем один раз: обход хранилища на каждое
                 // нажатие клавиши был бы заметно медленным.
                 this.renderMultiValue(setting, field, vaultTags(this.app), true, preset);
+                break;
+
+            case "dataview":
+                setting.addText((text) => {
+                    if (preset !== undefined) text.setValue(String(preset));
+                    text.onChange((value) => this.setValue(field.name, value));
+                    new DataviewSuggest(this.app, text.inputEl, {
+                        query: input.query,
+                        fieldName: field.name,
+                        getForm: () => this.values,
+                        onChoose: (value) => this.setValue(field.name, value),
+                        onError: (message) => {
+                            if (this.errorEl) this.errorEl.setText(message);
+                        },
+                    });
+                });
                 break;
 
             case "note":

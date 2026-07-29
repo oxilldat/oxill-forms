@@ -44,6 +44,8 @@ export function defaultInputFor(type: InputTypeName): InputType {
             return { type: "note", folder: "" };
         case "slider":
             return { type: "slider", min: 0, max: 10, step: 1 };
+        case "dataview":
+            return { type: "dataview", query: "" };
         case "text":
         case "textarea":
         case "number":
@@ -101,6 +103,9 @@ export function validateField(field: FieldDefinition, others: FieldDefinition[])
     }
     if (input.type === "note" && input.folder.trim() === "") {
         return "Не указана папка с заметками";
+    }
+    if (input.type === "dataview" && input.query.trim() === "") {
+        return "Не задан запрос Dataview";
     }
     if (input.type === "slider") {
         if (input.min >= input.max) return "Минимум ползунка должен быть меньше максимума";

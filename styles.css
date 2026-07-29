@@ -49,6 +49,39 @@
     min-height: 5rem;
 }
 
+/* === Окно подтверждения === */
+
+.mfl-confirm-modal {
+    width: min(440px, 92vw);
+}
+
+.mfl-confirm-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.mfl-confirm-head .mfl-title {
+    margin-bottom: 0;
+}
+
+.mfl-confirm-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    color: var(--text-warning);
+    background-color: var(--background-modifier-hover);
+}
+
+.mfl-confirm-text {
+    color: var(--text-muted);
+    padding: 0.75rem 0 0.25rem;
+    line-height: var(--line-height-tight);
+}
+
 /* === Множественный выбор и теги === */
 
 .mfl-multi-row .setting-item-control {

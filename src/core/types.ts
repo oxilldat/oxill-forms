@@ -39,6 +39,7 @@ export type InputType =
     | SelectInput
     | MultiselectInput
     | { type: "tag" }
+    | { type: "dataview"; query: string }
     | { type: "note"; folder: string }
     | { type: "folder" }
     | { type: "image" }
@@ -88,6 +89,7 @@ export const INPUT_TYPE_LABELS: Record<InputTypeName, string> = {
     select: "Выбор из списка",
     multiselect: "Выбор нескольких",
     tag: "Теги",
+    dataview: "Список из запроса Dataview",
     note: "Заметка из папки",
     folder: "Папка",
     image: "Изображение",

@@ -1,7 +1,9 @@
 import { App, Modal, Setting } from "obsidian";
+import { isDataviewAvailable } from "../core/dataview";
 import { defaultInputFor, validateField, withSource } from "../core/fields";
 import { INPUT_TYPE_LABELS } from "../core/types";
 import type { FieldDefinition, InputTypeName, SelectOption } from "../core/types";
+import { ConfirmModal } from "./ConfirmModal";
 import { FolderSuggest } from "./FolderSuggest";
 import { restrictToLatin } from "./restrictToLatin";
 
@@ -19,6 +21,9 @@ interface FieldEditorOptions {
  */
 export class FieldEditorModal extends Modal {
     private draft: FieldDefinition;
+    /** Слепок при открытии — по нему понимаем, были ли правки. */
+    private readonly snapshot: string;
+    private mayClose = false;
     private optionsEl: HTMLElement | null = null;
     private errorEl: HTMLElement | null = null;
 
@@ -28,6 +33,7 @@ export class FieldEditorModal extends Modal {
     ) {
         super(app);
         this.draft = structuredClone(options.field);
+        this.snapshot = JSON.stringify(this.draft);
     }
 
     onOpen(): void {
@@ -133,6 +139,32 @@ export class FieldEditorModal extends Modal {
             new Setting(container)
                 .setName("Куда сохраняется")
                 .setDesc(`Папка задана в настройках плагина — «Место сохранения ${folder}»`);
+            return;
+        }
+
+        if (input.type === "dataview") {
+            if (!isDataviewAvailable(this.app)) {
+                container.createDiv({
+                    cls: "mfl-warning",
+                    text: "Плагин Dataview не установлен или отключён — список будет пустым",
+                });
+            }
+
+            new Setting(container)
+                .setClass("mfl-textarea")
+                .setName("Запрос")
+                .setDesc(
+                    'Выражение на JS. Доступны dv, pages и form — значения формы. Пример: dv.pages(\'"Люди"\').map(p => p.file.name)',
+                )
+                .addTextArea((area) =>
+                    area
+                        .setPlaceholder('dv.pages(\'"Люди"\').map(p => p.file.name)')
+                        .setValue(input.query)
+                        .onChange((value) => {
+                            input.query = value;
+                            this.clearError();
+                        }),
+                );
             return;
         }
 
@@ -272,8 +304,36 @@ export class FieldEditorModal extends Modal {
             return;
         }
 
+        this.mayClose = true;
         this.close();
         this.options.onSubmit(this.draft);
+    }
+
+    private isDirty(): boolean {
+        return JSON.stringify(this.draft) !== this.snapshot;
+    }
+
+    /** Как и в редакторе формы: несохранённые правки не теряем молча. */
+    close(): void {
+        if (this.mayClose || !this.isDirty()) {
+            super.close();
+            return;
+        }
+
+        new ConfirmModal(this.app, {
+            title: "Закрыть без сохранения?",
+            message:
+                "Настройки поля не сохранены и будут потеряны. " +
+                `Вернитесь и нажмите «${this.options.isNew ? "Добавить" : "Сохранить"}», чтобы их оставить.`,
+            icon: "alert-triangle",
+            danger: true,
+            confirmText: "Закрыть без сохранения",
+            cancelText: "Вернуться к правке",
+            onConfirm: () => {
+                this.mayClose = true;
+                this.close();
+            },
+        }).open();
     }
 
     onClose(): void {

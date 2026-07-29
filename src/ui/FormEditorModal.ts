@@ -2,6 +2,7 @@ import { App, Modal, Setting, setIcon } from "obsidian";
 import { createField, moveField, removeFieldAt, validateFields } from "../core/fields";
 import { INPUT_TYPE_LABELS } from "../core/types";
 import type { FieldDefinition, FormDefinition } from "../core/types";
+import { ConfirmModal } from "./ConfirmModal";
 import { FieldEditorModal } from "./FieldEditorModal";
 
 interface FormEditorOptions {
@@ -17,6 +18,9 @@ interface FormEditorOptions {
 export class FormEditorModal extends Modal {
     private draft: FormDefinition;
     private readonly originalName: string;
+    /** Слепок при открытии — по нему понимаем, были ли правки. */
+    private readonly snapshot: string;
+    private mayClose = false;
     private fieldsEl: HTMLElement | null = null;
     private errorEl: HTMLElement | null = null;
 
@@ -27,6 +31,7 @@ export class FormEditorModal extends Modal {
         super(app);
         this.draft = structuredClone(options.form);
         this.originalName = options.form.name;
+        this.snapshot = JSON.stringify(this.draft);
     }
 
     onOpen(): void {
@@ -131,8 +136,39 @@ export class FormEditorModal extends Modal {
             return;
         }
 
+        this.mayClose = true;
         this.close();
         this.options.onSave(this.draft, this.originalName);
+    }
+
+    private isDirty(): boolean {
+        return JSON.stringify(this.draft) !== this.snapshot;
+    }
+
+    /**
+     * Крестик, Escape и клик мимо окна приходят сюда. Если правки есть и они
+     * не сохранены — сначала спрашиваем, потому что терять их молча нельзя.
+     */
+    close(): void {
+        if (this.mayClose || !this.isDirty()) {
+            super.close();
+            return;
+        }
+
+        new ConfirmModal(this.app, {
+            title: "Закрыть без сохранения?",
+            message:
+                "Изменения в составе полей не сохранены и будут потеряны. " +
+                "Вернитесь и нажмите «Сохранить», чтобы их оставить.",
+            icon: "alert-triangle",
+            danger: true,
+            confirmText: "Закрыть без сохранения",
+            cancelText: "Вернуться к правке",
+            onConfirm: () => {
+                this.mayClose = true;
+                this.close();
+            },
+        }).open();
     }
 
     onClose(): void {

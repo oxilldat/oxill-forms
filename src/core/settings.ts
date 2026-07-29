@@ -95,6 +95,9 @@ function parseInput(raw: Record<string, unknown>): InputType | null {
         case "note":
             return { type: "note", folder: asString(raw.folder) };
 
+        case "dataview":
+            return { type: "dataview", query: asString(raw.query) };
+
         case "slider": {
             const min = asNumber(raw.min, 0);
             const max = asNumber(raw.max, 10);
