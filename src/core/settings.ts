@@ -86,6 +86,7 @@ function parseInput(raw: Record<string, unknown>): InputType | null {
         case "date":
         case "time":
         case "datetime":
+        case "tag":
         case "folder":
         case "image":
         case "file":
@@ -101,9 +102,11 @@ function parseInput(raw: Record<string, unknown>): InputType | null {
             return { type: "slider", min, max, step: step > 0 ? step : 1 };
         }
 
-        case "select": {
+        case "select":
+        case "multiselect": {
+            const kind = raw.type;
             if (raw.source === "notes") {
-                return { type: "select", source: "notes", folder: asString(raw.folder) };
+                return { type: kind, source: "notes", folder: asString(raw.folder) };
             }
             // Формы, созданные до появления `source`, были списком значений.
             const rawOptions = Array.isArray(raw.options) ? raw.options : [];
@@ -113,7 +116,7 @@ function parseInput(raw: Record<string, unknown>): InputType | null {
                 const label = asString(option.label) === "" ? value : asString(option.label);
                 return [{ value, label }];
             });
-            return { type: "select", source: "fixed", options };
+            return { type: kind, source: "fixed", options };
         }
 
         default:

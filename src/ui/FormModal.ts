@@ -1,9 +1,11 @@
-import { App, Modal, Setting, TFile } from "obsidian";
+import { App, Modal, Setting } from "obsidian";
 import { IMAGE_ACCEPT, isAllowedImage, saveAttachment, toWikiLink } from "../core/attachments";
 import { FormResult } from "../core/FormResult";
 import type { FieldValue, FormData } from "../core/FormResult";
-import type { FieldDefinition, FormDefinition } from "../core/types";
+import { noteOptions, vaultTags } from "../core/vault";
+import type { FieldDefinition, FormDefinition, SelectOption } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
+import { MultiValueField } from "./MultiValueField";
 import { NoteSuggest } from "./NoteSuggest";
 
 export interface AttachmentFolders {
@@ -129,27 +131,35 @@ export class FormModal extends Modal {
                 });
                 break;
 
-            case "select":
-                if (input.source === "fixed") {
-                    setting.addDropdown((dropdown) => {
-                        dropdown.addOption("", "—");
-                        for (const option of input.options) {
-                            dropdown.addOption(option.value, option.label);
-                        }
-                        dropdown.setValue(preset === undefined ? "" : String(preset));
-                        dropdown.onChange((value) => this.setValue(field.name, value));
-                    });
-                } else {
-                    const notes = this.notesIn(input.folder);
-                    setting.addDropdown((dropdown) => {
-                        dropdown.addOption("", "—");
-                        for (const note of notes) {
-                            dropdown.addOption(note.basename, note.basename);
-                        }
-                        dropdown.setValue(preset === undefined ? "" : String(preset));
-                        dropdown.onChange((value) => this.setValue(field.name, value));
-                    });
-                }
+            case "select": {
+                const options =
+                    input.source === "fixed"
+                        ? input.options
+                        : noteOptions(this.app, input.folder);
+                setting.addDropdown((dropdown) => {
+                    dropdown.addOption("", "—");
+                    for (const option of options) {
+                        dropdown.addOption(option.value, option.label);
+                    }
+                    dropdown.setValue(preset === undefined ? "" : String(preset));
+                    dropdown.onChange((value) => this.setValue(field.name, value));
+                });
+                break;
+            }
+
+            case "multiselect": {
+                const candidates =
+                    input.source === "fixed"
+                        ? input.options
+                        : noteOptions(this.app, input.folder);
+                this.renderMultiValue(setting, field, candidates, false, preset);
+                break;
+            }
+
+            case "tag":
+                // Список тегов считаем один раз: обход хранилища на каждое
+                // нажатие клавиши был бы заметно медленным.
+                this.renderMultiValue(setting, field, vaultTags(this.app), true, preset);
                 break;
 
             case "note":
@@ -196,6 +206,24 @@ export class FormModal extends Modal {
         setting.addText((text) => {
             if (preset !== undefined) text.setValue(String(preset));
             text.onChange((value) => this.setValue(field.name, value));
+        });
+    }
+
+    private renderMultiValue(
+        setting: Setting,
+        field: FieldDefinition,
+        candidates: SelectOption[],
+        allowNew: boolean,
+        preset: FieldValue | undefined,
+    ): void {
+        setting.setClass("mfl-multi-row");
+        new MultiValueField({
+            app: this.app,
+            container: setting.controlEl,
+            initial: Array.isArray(preset) ? preset : [],
+            candidates,
+            allowNew,
+            onChange: (values) => this.setValue(field.name, values),
         });
     }
 
@@ -247,16 +275,6 @@ export class FormModal extends Modal {
         });
     }
 
-    /** Заметки указанной папки. Пустой путь означает всё хранилище. */
-    private notesIn(folder: string): TFile[] {
-        const trimmed = folder.trim().replace(/\/$/, "");
-        const prefix = trimmed === "" || trimmed === "/" ? "" : `${trimmed}/`;
-        return this.app.vault
-            .getMarkdownFiles()
-            .filter((file) => file.path.startsWith(prefix))
-            .sort((a, b) => a.basename.localeCompare(b.basename));
-    }
-
     private setValue(name: string, value: FieldValue): void {
         this.values[name] = value;
         if (this.errorEl) this.errorEl.setText("");
@@ -267,7 +285,7 @@ export class FormModal extends Modal {
         const data: FormData = {};
         for (const field of this.form.fields) {
             const value = this.values[field.name];
-            if (value === undefined || value === "") continue;
+            if (value === undefined || this.isEmpty(value)) continue;
             data[field.name] = value;
         }
         return data;
@@ -287,8 +305,11 @@ export class FormModal extends Modal {
     }
 
     private isEmpty(value: FieldValue | undefined): boolean {
+        if (value === undefined || value === "") return true;
+        // Пустой список меток — тоже незаполненное поле.
+        if (Array.isArray(value) && value.length === 0) return true;
         // false у переключателя — заполненное значение, а не пропуск.
-        return value === undefined || value === "";
+        return false;
     }
 
     private cancel(): void {

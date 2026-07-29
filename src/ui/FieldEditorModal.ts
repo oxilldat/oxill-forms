@@ -1,5 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
-import { defaultInputFor, validateField } from "../core/fields";
+import { defaultInputFor, validateField, withSource } from "../core/fields";
 import { INPUT_TYPE_LABELS } from "../core/types";
 import type { FieldDefinition, InputTypeName, SelectOption } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
@@ -136,15 +136,20 @@ export class FieldEditorModal extends Modal {
             return;
         }
 
-        if (input.type === "select") {
+        if (input.type === "tag") {
+            new Setting(container)
+                .setName("Источник подсказок")
+                .setDesc("Теги, уже встречающиеся в хранилище. Свои тоже можно вводить");
+            return;
+        }
+
+        if (input.type === "select" || input.type === "multiselect") {
+            const kind = input.type;
             new Setting(container).setName("Источник").addDropdown((dropdown) => {
                 dropdown.addOption("fixed", "Заданный список");
                 dropdown.addOption("notes", "Заметки из папки");
                 dropdown.setValue(input.source).onChange((value) => {
-                    this.draft.input =
-                        value === "notes"
-                            ? { type: "select", source: "notes", folder: "" }
-                            : { type: "select", source: "fixed", options: [] };
+                    this.draft.input = withSource(kind, value === "notes" ? "notes" : "fixed");
                     this.renderInputOptions();
                     this.clearError();
                 });
@@ -252,8 +257,9 @@ export class FieldEditorModal extends Modal {
     private submit(): void {
         this.draft.name = this.draft.name.trim();
 
-        if (this.draft.input.type === "select" && this.draft.input.source === "fixed") {
-            for (const option of this.draft.input.options) {
+        const input = this.draft.input;
+        if ((input.type === "select" || input.type === "multiselect") && input.source === "fixed") {
+            for (const option of input.options) {
                 option.value = option.value.trim();
                 // Пустая подпись — не ошибка: показываем само значение.
                 if (option.label.trim() === "") option.label = option.value;

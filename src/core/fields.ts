@@ -15,11 +15,31 @@ export function isFieldNameTaken(
     return fields.some((field) => field.name === name && field !== exceptField);
 }
 
+/**
+ * Пересобирает выбор при смене источника. Отдельная функция нужна из-за
+ * типов: `{ type: kind }` с union-литералом в kind не подходит под InputType.
+ */
+export function withSource(
+    type: "select" | "multiselect",
+    source: "fixed" | "notes",
+): InputType {
+    if (type === "select") {
+        return source === "notes"
+            ? { type: "select", source: "notes", folder: "" }
+            : { type: "select", source: "fixed", options: [] };
+    }
+    return source === "notes"
+        ? { type: "multiselect", source: "notes", folder: "" }
+        : { type: "multiselect", source: "fixed", options: [] };
+}
+
 /** Значения по умолчанию для каждого типа при переключении в редакторе. */
 export function defaultInputFor(type: InputTypeName): InputType {
     switch (type) {
         case "select":
             return { type: "select", source: "fixed", options: [] };
+        case "multiselect":
+            return { type: "multiselect", source: "fixed", options: [] };
         case "note":
             return { type: "note", folder: "" };
         case "slider":
@@ -31,6 +51,7 @@ export function defaultInputFor(type: InputTypeName): InputType {
         case "date":
         case "time":
         case "datetime":
+        case "tag":
         case "folder":
         case "image":
         case "file":
@@ -70,11 +91,13 @@ export function validateField(field: FieldDefinition, others: FieldDefinition[])
     if (isFieldNameTaken(others, name)) return "Такой идентификатор в форме уже есть";
 
     const input = field.input;
-    if (input.type === "select" && input.source === "fixed" && input.options.length === 0) {
-        return "Не задан ни один вариант выбора";
-    }
-    if (input.type === "select" && input.source === "notes" && input.folder.trim() === "") {
-        return "Не указана папка с заметками";
+    if (input.type === "select" || input.type === "multiselect") {
+        if (input.source === "fixed" && input.options.length === 0) {
+            return "Не задан ни один вариант выбора";
+        }
+        if (input.source === "notes" && input.folder.trim() === "") {
+            return "Не указана папка с заметками";
+        }
     }
     if (input.type === "note" && input.folder.trim() === "") {
         return "Не указана папка с заметками";

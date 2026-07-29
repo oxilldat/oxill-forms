@@ -49,6 +49,59 @@
     min-height: 5rem;
 }
 
+/* === Множественный выбор и теги === */
+
+.mfl-multi-row .setting-item-control {
+    flex: 1 1 55%;
+}
+
+.mfl-multi {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: 100%;
+}
+
+.mfl-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.mfl-chips:empty {
+    display: none;
+}
+
+.mfl-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem 0.2rem 0.1rem 0.5rem;
+    border-radius: var(--radius-s);
+    background-color: var(--background-modifier-hover);
+    font-size: var(--font-ui-smaller);
+}
+
+.mfl-chip-remove {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.mfl-chip-remove:hover {
+    color: var(--text-error);
+}
+
+.mfl-chip-remove .svg-icon {
+    width: 0.85em;
+    height: 0.85em;
+}
+
+.mfl-multi-input {
+    width: 100%;
+}
+
 .mfl-upload .setting-item-control {
     flex-direction: column;
     align-items: flex-end;

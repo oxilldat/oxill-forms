@@ -18,6 +18,14 @@ export type SelectInput =
     | { type: "select"; source: "fixed"; options: SelectOption[] }
     | { type: "select"; source: "notes"; folder: string };
 
+/** Множественный выбор. Источники те же, что у одиночного. */
+export type MultiselectInput =
+    | { type: "multiselect"; source: "fixed"; options: SelectOption[] }
+    | { type: "multiselect"; source: "notes"; folder: string };
+
+/** Типы, у которых значений может быть несколько. */
+export type MultiValueTypeName = "multiselect" | "tag";
+
 /** Типы полей ввода, поддерживаемые на текущем этапе. */
 export type InputType =
     | { type: "text" }
@@ -29,6 +37,8 @@ export type InputType =
     | { type: "time" }
     | { type: "datetime" }
     | SelectInput
+    | MultiselectInput
+    | { type: "tag" }
     | { type: "note"; folder: string }
     | { type: "folder" }
     | { type: "image" }
@@ -76,6 +86,8 @@ export const INPUT_TYPE_LABELS: Record<InputTypeName, string> = {
     time: "Время",
     datetime: "Дата и время",
     select: "Выбор из списка",
+    multiselect: "Выбор нескольких",
+    tag: "Теги",
     note: "Заметка из папки",
     folder: "Папка",
     image: "Изображение",
