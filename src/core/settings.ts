@@ -1,36 +1,58 @@
-import type { FieldDefinition, FormDefinition, PluginSettings } from "./types";
+import type { FieldDefinition, FormDefinition, InputType, PluginSettings } from "./types";
+
+export const DEFAULT_IMAGE_FOLDER = "Вложения/Картинки";
+export const DEFAULT_FILE_FOLDER = "Вложения/Файлы";
 
 export function defaultSettings(): PluginSettings {
-    return { forms: [] };
+    return {
+        forms: [],
+        imageFolder: DEFAULT_IMAGE_FOLDER,
+        fileFolder: DEFAULT_FILE_FOLDER,
+    };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function asString(value: unknown, fallback = ""): string {
+    return typeof value === "string" ? value : fallback;
+}
+
+function asNumber(value: unknown, fallback: number): number {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
 /**
  * Разбор data.json. Файл могли поправить руками или он мог остаться от
  * прошлой версии, поэтому всё, что не проходит проверку, отбрасывается,
- * а не роняет плагин. Испорченные поля теряются молча — это осознанный
- * размен: лучше открыть форму без одного поля, чем не открыть вовсе.
+ * а не роняет плагин.
  */
 export function parseSettings(raw: unknown): PluginSettings {
-    if (!isRecord(raw) || !Array.isArray(raw.forms)) return defaultSettings();
+    const defaults = defaultSettings();
+    if (!isRecord(raw)) return defaults;
 
     const forms: FormDefinition[] = [];
-    for (const candidate of raw.forms) {
-        const form = parseForm(candidate);
-        if (form && !forms.some((f) => f.name === form.name)) forms.push(form);
+    if (Array.isArray(raw.forms)) {
+        for (const candidate of raw.forms) {
+            const form = parseForm(candidate);
+            if (form && !forms.some((f) => f.name === form.name)) forms.push(form);
+        }
     }
-    return { forms };
+
+    return {
+        forms,
+        imageFolder: asString(raw.imageFolder, defaults.imageFolder),
+        fileFolder: asString(raw.fileFolder, defaults.fileFolder),
+    };
 }
 
 function parseForm(raw: unknown): FormDefinition | null {
     if (!isRecord(raw)) return null;
-    const name = typeof raw.name === "string" ? raw.name.trim() : "";
+    const name = asString(raw.name).trim();
     if (name === "") return null;
 
-    const title = typeof raw.title === "string" && raw.title.trim() !== "" ? raw.title : name;
+    const title = asString(raw.title).trim() === "" ? name : asString(raw.title);
     const rawFields = Array.isArray(raw.fields) ? raw.fields : [];
 
     const fields: FieldDefinition[] = [];
@@ -43,7 +65,7 @@ function parseForm(raw: unknown): FormDefinition | null {
 
 function parseField(raw: unknown): FieldDefinition | null {
     if (!isRecord(raw) || !isRecord(raw.input)) return null;
-    const name = typeof raw.name === "string" ? raw.name.trim() : "";
+    const name = asString(raw.name).trim();
     if (name === "") return null;
 
     const input = parseInput(raw.input);
@@ -56,27 +78,45 @@ function parseField(raw: unknown): FieldDefinition | null {
     return field;
 }
 
-function parseInput(raw: Record<string, unknown>): FieldDefinition["input"] | null {
+function parseInput(raw: Record<string, unknown>): InputType | null {
     switch (raw.type) {
         case "text":
         case "textarea":
         case "number":
-        case "date":
         case "toggle":
+        case "date":
+        case "time":
+        case "datetime":
         case "folder":
+        case "image":
+        case "file":
             return { type: raw.type };
+
         case "note":
-            return { type: "note", folder: typeof raw.folder === "string" ? raw.folder : "" };
+            return { type: "note", folder: asString(raw.folder) };
+
+        case "slider": {
+            const min = asNumber(raw.min, 0);
+            const max = asNumber(raw.max, 10);
+            const step = asNumber(raw.step, 1);
+            return { type: "slider", min, max, step: step > 0 ? step : 1 };
+        }
+
         case "select": {
+            if (raw.source === "notes") {
+                return { type: "select", source: "notes", folder: asString(raw.folder) };
+            }
+            // Формы, созданные до появления `source`, были списком значений.
             const rawOptions = Array.isArray(raw.options) ? raw.options : [];
             const options = rawOptions.flatMap((option) => {
                 if (!isRecord(option) || typeof option.value !== "string") return [];
                 const value = option.value;
-                const label = typeof option.label === "string" && option.label !== "" ? option.label : value;
+                const label = asString(option.label) === "" ? value : asString(option.label);
                 return [{ value, label }];
             });
-            return { type: "select", options };
+            return { type: "select", source: "fixed", options };
         }
+
         default:
             return null;
     }

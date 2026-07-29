@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type ModalFormsLitePlugin from "../main";
+import { FolderSuggest } from "../ui/FolderSuggest";
 import { FormListModal } from "../ui/FormListModal";
 
 export class ModalFormsSettingTab extends PluginSettingTab {
@@ -29,5 +30,46 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                     .setCta()
                     .onClick(() => this.plugin.openCreateFormModal()),
             );
+
+        new Setting(containerEl).setName("Вложения").setHeading();
+
+        this.renderFolderSetting(
+            "Место сохранения фотографий",
+            "Куда попадают JPEG, PNG и WebP из полей типа «Изображение»",
+            this.plugin.settings.imageFolder,
+            (folder) => this.plugin.updateSettings({ imageFolder: folder }),
+        );
+
+        this.renderFolderSetting(
+            "Место сохранения файлов",
+            "Куда попадает всё остальное из полей типа «Файл»",
+            this.plugin.settings.fileFolder,
+            (folder) => this.plugin.updateSettings({ fileFolder: folder }),
+        );
+    }
+
+    /**
+     * Папку можно выбрать из существующих или вписать несуществующую —
+     * тогда она будет создана при первой загрузке вложения.
+     */
+    private renderFolderSetting(
+        name: string,
+        description: string,
+        value: string,
+        save: (folder: string) => Promise<void>,
+    ): void {
+        new Setting(this.containerEl)
+            .setName(name)
+            .setDesc(description)
+            .addText((text) => {
+                text.setPlaceholder("Вложения")
+                    .setValue(value)
+                    .onChange(async (entered) => {
+                        await save(entered.trim());
+                    });
+                new FolderSuggest(this.app, text.inputEl, async (path) => {
+                    await save(path);
+                });
+            });
     }
 }

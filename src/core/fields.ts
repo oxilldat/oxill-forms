@@ -19,15 +19,21 @@ export function isFieldNameTaken(
 export function defaultInputFor(type: InputTypeName): InputType {
     switch (type) {
         case "select":
-            return { type: "select", options: [] };
+            return { type: "select", source: "fixed", options: [] };
         case "note":
             return { type: "note", folder: "" };
+        case "slider":
+            return { type: "slider", min: 0, max: 10, step: 1 };
         case "text":
         case "textarea":
         case "number":
-        case "date":
         case "toggle":
+        case "date":
+        case "time":
+        case "datetime":
         case "folder":
+        case "image":
+        case "file":
             return { type };
     }
 }
@@ -63,11 +69,20 @@ export function validateField(field: FieldDefinition, others: FieldDefinition[])
     if (!isValidName(name)) return "Идентификатор — только латинские буквы";
     if (isFieldNameTaken(others, name)) return "Такой идентификатор в форме уже есть";
 
-    if (field.input.type === "select" && field.input.options.length === 0) {
+    const input = field.input;
+    if (input.type === "select" && input.source === "fixed" && input.options.length === 0) {
         return "Не задан ни один вариант выбора";
     }
-    if (field.input.type === "note" && field.input.folder.trim() === "") {
+    if (input.type === "select" && input.source === "notes" && input.folder.trim() === "") {
         return "Не указана папка с заметками";
+    }
+    if (input.type === "note" && input.folder.trim() === "") {
+        return "Не указана папка с заметками";
+    }
+    if (input.type === "slider") {
+        if (input.min >= input.max) return "Минимум ползунка должен быть меньше максимума";
+        if (input.step <= 0) return "Шаг ползунка должен быть больше нуля";
+        if (input.step > input.max - input.min) return "Шаг больше всего диапазона";
     }
     return null;
 }

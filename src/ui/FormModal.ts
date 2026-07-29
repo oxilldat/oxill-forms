@@ -1,9 +1,15 @@
-import { App, Modal, Setting } from "obsidian";
+import { App, Modal, Setting, TFile } from "obsidian";
+import { IMAGE_ACCEPT, isAllowedImage, saveAttachment, toWikiLink } from "../core/attachments";
 import { FormResult } from "../core/FormResult";
 import type { FieldValue, FormData } from "../core/FormResult";
 import type { FieldDefinition, FormDefinition } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
 import { NoteSuggest } from "./NoteSuggest";
+
+export interface AttachmentFolders {
+    imageFolder: string;
+    fileFolder: string;
+}
 
 /**
  * Заполнение формы. Собирает значения в плоский объект и отдаёт их через
@@ -18,6 +24,7 @@ export class FormModal extends Modal {
     constructor(
         app: App,
         private form: FormDefinition,
+        private folders: AttachmentFolders,
         private resolve: (result: FormResult) => void,
         initial: Partial<FormData> = {},
     ) {
@@ -27,10 +34,12 @@ export class FormModal extends Modal {
             const provided = initial[field.name];
             if (provided !== undefined) {
                 this.values[field.name] = provided;
-            } else if (field.input.type === "toggle") {
-                // У переключателя «выключено» — полноценное значение, а не пустота.
-                this.values[field.name] = false;
+                continue;
             }
+            // У этих полей «пусто» не бывает: виджет всегда что-то показывает,
+            // и результат должен совпадать с тем, что видит пользователь.
+            if (field.input.type === "toggle") this.values[field.name] = false;
+            if (field.input.type === "slider") this.values[field.name] = field.input.min;
         }
     }
 
@@ -71,24 +80,19 @@ export class FormModal extends Modal {
         if (field.description) setting.setDesc(field.description);
         if (field.required) setting.nameEl.addClass("mfl-required");
 
+        const preset = this.values[field.name];
         const input = field.input;
+
         switch (input.type) {
             case "text":
-                setting.addText((text) =>
-                    text.onChange((value) => this.setValue(field.name, value)),
-                );
-                break;
-
             case "textarea":
-                setting.setClass("mfl-textarea");
-                setting.addTextArea((area) =>
-                    area.onChange((value) => this.setValue(field.name, value)),
-                );
+                this.renderTextLike(setting, field, input.type === "textarea", preset);
                 break;
 
             case "number":
                 setting.addText((text) => {
                     text.inputEl.type = "number";
+                    if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => {
                         // Пустая строка — это «не заполнено», а не ноль.
                         this.setValue(field.name, value === "" ? "" : Number(value));
@@ -96,33 +100,61 @@ export class FormModal extends Modal {
                 });
                 break;
 
-            case "date":
-                setting.addText((text) => {
-                    text.inputEl.type = "date";
-                    text.onChange((value) => this.setValue(field.name, value));
+            case "slider":
+                setting.addSlider((slider) => {
+                    slider
+                        .setLimits(input.min, input.max, input.step)
+                        .setValue(typeof preset === "number" ? preset : input.min)
+                        .setDynamicTooltip()
+                        .onChange((value) => this.setValue(field.name, value));
                 });
                 break;
 
             case "toggle":
                 setting.addToggle((toggle) =>
                     toggle
-                        .setValue(this.values[field.name] === true)
+                        .setValue(preset === true)
                         .onChange((value) => this.setValue(field.name, value)),
                 );
                 break;
 
-            case "select":
-                setting.addDropdown((dropdown) => {
-                    dropdown.addOption("", "—");
-                    for (const option of input.options) {
-                        dropdown.addOption(option.value, option.label);
-                    }
-                    dropdown.onChange((value) => this.setValue(field.name, value));
+            case "date":
+            case "time":
+            case "datetime":
+                setting.addText((text) => {
+                    text.inputEl.type =
+                        input.type === "datetime" ? "datetime-local" : input.type;
+                    if (preset !== undefined) text.setValue(String(preset));
+                    text.onChange((value) => this.setValue(field.name, value));
                 });
+                break;
+
+            case "select":
+                if (input.source === "fixed") {
+                    setting.addDropdown((dropdown) => {
+                        dropdown.addOption("", "—");
+                        for (const option of input.options) {
+                            dropdown.addOption(option.value, option.label);
+                        }
+                        dropdown.setValue(preset === undefined ? "" : String(preset));
+                        dropdown.onChange((value) => this.setValue(field.name, value));
+                    });
+                } else {
+                    const notes = this.notesIn(input.folder);
+                    setting.addDropdown((dropdown) => {
+                        dropdown.addOption("", "—");
+                        for (const note of notes) {
+                            dropdown.addOption(note.basename, note.basename);
+                        }
+                        dropdown.setValue(preset === undefined ? "" : String(preset));
+                        dropdown.onChange((value) => this.setValue(field.name, value));
+                    });
+                }
                 break;
 
             case "note":
                 setting.addText((text) => {
+                    if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
                     new NoteSuggest(this.app, text.inputEl, input.folder, (basename) =>
                         this.setValue(field.name, basename),
@@ -132,24 +164,97 @@ export class FormModal extends Modal {
 
             case "folder":
                 setting.addText((text) => {
+                    if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
                     new FolderSuggest(this.app, text.inputEl, (path) =>
                         this.setValue(field.name, path),
                     );
                 });
                 break;
-        }
 
-        // Значения, переданные при вызове, показываем в уже отрисованных полях.
-        const preset = this.values[field.name];
-        if (preset !== undefined && input.type !== "toggle") {
-            const control = setting.controlEl.querySelector("input, textarea, select");
-            if (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement) {
-                control.value = String(preset);
-            } else if (control instanceof HTMLSelectElement) {
-                control.value = String(preset);
-            }
+            case "image":
+            case "file":
+                this.renderUpload(setting, field, input.type === "image", preset);
+                break;
         }
+    }
+
+    private renderTextLike(
+        setting: Setting,
+        field: FieldDefinition,
+        multiline: boolean,
+        preset: FieldValue | undefined,
+    ): void {
+        if (multiline) {
+            setting.setClass("mfl-textarea");
+            setting.addTextArea((area) => {
+                if (preset !== undefined) area.setValue(String(preset));
+                area.onChange((value) => this.setValue(field.name, value));
+            });
+            return;
+        }
+        setting.addText((text) => {
+            if (preset !== undefined) text.setValue(String(preset));
+            text.onChange((value) => this.setValue(field.name, value));
+        });
+    }
+
+    /**
+     * Загрузка вложения. Файл попадает в хранилище сразу при выборе, а в
+     * результат уходит ссылка на него — так к моменту отправки формы файл
+     * уже лежит на месте и путь заведомо верный.
+     */
+    private renderUpload(
+        setting: Setting,
+        field: FieldDefinition,
+        isImage: boolean,
+        preset: FieldValue | undefined,
+    ): void {
+        setting.setClass("mfl-upload");
+
+        const control = setting.controlEl;
+        const picker = control.createEl("input", { type: "file" });
+        if (isImage) picker.accept = IMAGE_ACCEPT;
+
+        const info = control.createDiv({ cls: "mfl-upload-info" });
+        if (preset !== undefined) info.setText(String(preset));
+
+        picker.addEventListener("change", async () => {
+            const file = picker.files?.[0];
+            if (!file) return;
+
+            if (isImage && !isAllowedImage(file.name)) {
+                info.addClass("mfl-error");
+                info.setText("Подходят только JPEG, PNG и WebP");
+                picker.value = "";
+                return;
+            }
+
+            info.removeClass("mfl-error");
+            info.setText("Сохраняю…");
+
+            try {
+                const folder = isImage ? this.folders.imageFolder : this.folders.fileFolder;
+                const path = await saveAttachment(this.app, file, folder);
+                this.setValue(field.name, toWikiLink(path));
+                info.setText(path);
+            } catch (error) {
+                console.error("[modal-forms-lite] не удалось сохранить вложение", error);
+                info.addClass("mfl-error");
+                info.setText("Не удалось сохранить файл");
+                picker.value = "";
+            }
+        });
+    }
+
+    /** Заметки указанной папки. Пустой путь означает всё хранилище. */
+    private notesIn(folder: string): TFile[] {
+        const trimmed = folder.trim().replace(/\/$/, "");
+        const prefix = trimmed === "" || trimmed === "/" ? "" : `${trimmed}/`;
+        return this.app.vault
+            .getMarkdownFiles()
+            .filter((file) => file.path.startsWith(prefix))
+            .sort((a, b) => a.basename.localeCompare(b.basename));
     }
 
     private setValue(name: string, value: FieldValue): void {

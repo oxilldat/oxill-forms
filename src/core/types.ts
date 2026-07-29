@@ -3,25 +3,38 @@
  * поэтому менять эти типы можно только с оглядкой на уже сохранённые формы.
  */
 
-/** Типы полей ввода, поддерживаемые на текущем этапе. */
-export type InputType =
-    | { type: "text" }
-    | { type: "textarea" }
-    | { type: "number" }
-    | { type: "date" }
-    | { type: "toggle" }
-    | { type: "select"; options: SelectOption[] }
-    | { type: "note"; folder: string }
-    | { type: "folder" };
-
-export type InputTypeName = InputType["type"];
-
 export interface SelectOption {
     /** То, что попадёт в результат формы. */
     value: string;
     /** То, что видит пользователь в списке. */
     label: string;
 }
+
+/**
+ * Выпадающий список. Виджет один, а источник значений разный, поэтому
+ * различаем не типом, а полем `source` — иначе типов расплодилось бы вдвое.
+ */
+export type SelectInput =
+    | { type: "select"; source: "fixed"; options: SelectOption[] }
+    | { type: "select"; source: "notes"; folder: string };
+
+/** Типы полей ввода, поддерживаемые на текущем этапе. */
+export type InputType =
+    | { type: "text" }
+    | { type: "textarea" }
+    | { type: "number" }
+    | { type: "slider"; min: number; max: number; step: number }
+    | { type: "toggle" }
+    | { type: "date" }
+    | { type: "time" }
+    | { type: "datetime" }
+    | SelectInput
+    | { type: "note"; folder: string }
+    | { type: "folder" }
+    | { type: "image" }
+    | { type: "file" };
+
+export type InputTypeName = InputType["type"];
 
 export interface FieldDefinition {
     /** Ключ в результате формы. Уникален в пределах формы. */
@@ -43,16 +56,28 @@ export interface FormDefinition {
 
 export interface PluginSettings {
     forms: FormDefinition[];
+    /** Куда складывать картинки из полей типа «Изображение». */
+    imageFolder: string;
+    /** Куда складывать всё остальное из полей типа «Файл». */
+    fileFolder: string;
 }
 
-/** Человекочитаемые названия типов — для выпадающих списков в редакторе. */
+/**
+ * Человекочитаемые названия типов. Порядок ключей задаёт порядок в
+ * выпадающем списке редактора, поэтому они сгруппированы по смыслу.
+ */
 export const INPUT_TYPE_LABELS: Record<InputTypeName, string> = {
     text: "Текст",
     textarea: "Многострочный текст",
     number: "Число",
-    date: "Дата",
+    slider: "Ползунок",
     toggle: "Переключатель",
+    date: "Дата",
+    time: "Время",
+    datetime: "Дата и время",
     select: "Выбор из списка",
     note: "Заметка из папки",
     folder: "Папка",
+    image: "Изображение",
+    file: "Файл",
 };

@@ -49,6 +49,23 @@
     min-height: 5rem;
 }
 
+.mfl-upload .setting-item-control {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+}
+
+.mfl-upload input[type="file"] {
+    max-width: 100%;
+}
+
+.mfl-upload-info {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    word-break: break-all;
+    text-align: right;
+}
+
 .mfl-suggest-path {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);

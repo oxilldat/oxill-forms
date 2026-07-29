@@ -2,7 +2,7 @@ import { App } from "obsidian";
 import { findForm } from "./core/forms";
 import { FormResult } from "./core/FormResult";
 import type { FormData } from "./core/FormResult";
-import type { FormDefinition } from "./core/types";
+import type { FormDefinition, PluginSettings } from "./core/types";
 import { FormModal } from "./ui/FormModal";
 
 export interface OpenFormOptions {
@@ -18,17 +18,17 @@ export interface OpenFormOptions {
 export class ModalFormsApi {
     constructor(
         private app: App,
-        private getForms: () => FormDefinition[],
+        private getSettings: () => PluginSettings,
     ) {}
 
     /** Идентификаторы всех сохранённых форм. */
     listForms(): string[] {
-        return this.getForms().map((form) => form.name);
+        return this.getSettings().forms.map((form) => form.name);
     }
 
     /** Определение формы по идентификатору. */
     getForm(name: string): FormDefinition | undefined {
-        return findForm(this.getForms(), name);
+        return findForm(this.getSettings().forms, name);
     }
 
     /**
@@ -43,8 +43,7 @@ export class ModalFormsApi {
         reference: string | FormDefinition,
         options: OpenFormOptions = {},
     ): Promise<FormResult> {
-        const definition =
-            typeof reference === "string" ? this.getForm(reference) : reference;
+        const definition = typeof reference === "string" ? this.getForm(reference) : reference;
 
         if (!definition) {
             return Promise.reject(
@@ -52,8 +51,15 @@ export class ModalFormsApi {
             );
         }
 
+        const settings = this.getSettings();
         return new Promise((resolve) => {
-            new FormModal(this.app, definition, resolve, options.values ?? {}).open();
+            new FormModal(
+                this.app,
+                definition,
+                { imageFolder: settings.imageFolder, fileFolder: settings.fileFolder },
+                resolve,
+                options.values ?? {},
+            ).open();
         });
     }
 }

@@ -109,25 +109,54 @@ export class FieldEditorModal extends Modal {
         const input = this.draft.input;
 
         if (input.type === "note") {
+            this.renderFolderPicker(container, "Папка с заметками", input.folder, (path) => {
+                input.folder = path;
+            });
+            return;
+        }
+
+        if (input.type === "slider") {
+            this.renderNumber(container, "Минимум", input.min, (value) => {
+                input.min = value;
+            });
+            this.renderNumber(container, "Максимум", input.max, (value) => {
+                input.max = value;
+            });
+            this.renderNumber(container, "Шаг", input.step, (value) => {
+                input.step = value;
+            });
+            return;
+        }
+
+        if (input.type === "image" || input.type === "file") {
+            const folder = input.type === "image" ? "фотографий" : "файлов";
             new Setting(container)
-                .setName("Папка с заметками")
-                .setDesc("Начните вводить или выберите из списка")
-                .addText((text) => {
-                    text.setPlaceholder("Книги")
-                        .setValue(input.folder)
-                        .onChange((value) => {
-                            input.folder = value;
-                            this.clearError();
-                        });
-                    new FolderSuggest(this.app, text.inputEl, (path) => {
-                        input.folder = path;
-                        this.clearError();
-                    });
-                });
+                .setName("Куда сохраняется")
+                .setDesc(`Папка задана в настройках плагина — «Место сохранения ${folder}»`);
             return;
         }
 
         if (input.type === "select") {
+            new Setting(container).setName("Источник").addDropdown((dropdown) => {
+                dropdown.addOption("fixed", "Заданный список");
+                dropdown.addOption("notes", "Заметки из папки");
+                dropdown.setValue(input.source).onChange((value) => {
+                    this.draft.input =
+                        value === "notes"
+                            ? { type: "select", source: "notes", folder: "" }
+                            : { type: "select", source: "fixed", options: [] };
+                    this.renderInputOptions();
+                    this.clearError();
+                });
+            });
+
+            if (input.source === "notes") {
+                this.renderFolderPicker(container, "Папка с заметками", input.folder, (path) => {
+                    input.folder = path;
+                });
+                return;
+            }
+
             const list = container.createDiv({ cls: "mfl-options" });
             input.options.forEach((option, index) => {
                 this.renderSelectOption(list, input.options, option, index);
@@ -140,6 +169,45 @@ export class FieldEditorModal extends Modal {
                 }),
             );
         }
+    }
+
+    private renderFolderPicker(
+        container: HTMLElement,
+        name: string,
+        value: string,
+        onChange: (path: string) => void,
+    ): void {
+        new Setting(container)
+            .setName(name)
+            .setDesc("Начните вводить или выберите из списка")
+            .addText((text) => {
+                text.setPlaceholder("Книги")
+                    .setValue(value)
+                    .onChange((entered) => {
+                        onChange(entered);
+                        this.clearError();
+                    });
+                new FolderSuggest(this.app, text.inputEl, (path) => {
+                    onChange(path);
+                    this.clearError();
+                });
+            });
+    }
+
+    private renderNumber(
+        container: HTMLElement,
+        name: string,
+        value: number,
+        onChange: (value: number) => void,
+    ): void {
+        new Setting(container).setName(name).addText((text) => {
+            text.inputEl.type = "number";
+            text.setValue(String(value)).onChange((entered) => {
+                const parsed = Number(entered);
+                if (Number.isFinite(parsed)) onChange(parsed);
+                this.clearError();
+            });
+        });
     }
 
     private renderSelectOption(
@@ -184,7 +252,7 @@ export class FieldEditorModal extends Modal {
     private submit(): void {
         this.draft.name = this.draft.name.trim();
 
-        if (this.draft.input.type === "select") {
+        if (this.draft.input.type === "select" && this.draft.input.source === "fixed") {
             for (const option of this.draft.input.options) {
                 option.value = option.value.trim();
                 // Пустая подпись — не ошибка: показываем само значение.

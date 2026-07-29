@@ -19,9 +19,9 @@ export default class ModalFormsLitePlugin extends Plugin {
     async onload(): Promise<void> {
         this.settings = parseSettings(await this.loadData());
 
-        // Формы читаем через функцию, а не передаём массив: он пересоздаётся
-        // при каждой правке, и захваченная ссылка быстро протухла бы.
-        this.api = new ModalFormsApi(this.app, () => this.settings.forms);
+        // Настройки читаем через функцию, а не передаём объект: он
+        // пересоздаётся при каждой правке, и захваченная ссылка протухла бы.
+        this.api = new ModalFormsApi(this.app, () => this.settings);
         window.MFL = this.api;
 
         this.addSettingTab(new ModalFormsSettingTab(this.app, this));
@@ -40,6 +40,12 @@ export default class ModalFormsLitePlugin extends Plugin {
 
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
+    }
+
+    /** Точечная правка настроек: передаём только изменившиеся поля. */
+    async updateSettings(patch: Partial<PluginSettings>): Promise<void> {
+        this.settings = { ...this.settings, ...patch };
+        await this.saveSettings();
     }
 
     // === Операции над формами ===
