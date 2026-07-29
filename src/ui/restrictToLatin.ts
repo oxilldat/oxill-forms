@@ -1,0 +1,22 @@
+import { stripToLatin } from "../core/naming";
+
+/**
+ * Не даёт ввести в поле ничего, кроме латиницы: посторонние символы
+ * выкусываются прямо при вводе или вставке. Курсор возвращаем на место сами —
+ * иначе после чистки он прыгал бы в конец строки и ломал правку в середине.
+ */
+export function restrictToLatin(
+    input: HTMLInputElement,
+    onChange: (value: string) => void,
+): void {
+    input.addEventListener("input", () => {
+        const cleaned = stripToLatin(input.value);
+        if (cleaned !== input.value) {
+            const caret = input.selectionStart ?? input.value.length;
+            const position = stripToLatin(input.value.slice(0, caret)).length;
+            input.value = cleaned;
+            input.setSelectionRange(position, position);
+        }
+        onChange(cleaned);
+    });
+}

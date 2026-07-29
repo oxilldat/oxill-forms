@@ -1,0 +1,120 @@
+/* Modal Forms Lite */
+
+.mfl-modal .mfl-title {
+    margin-top: 0;
+}
+
+.mfl-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.mfl-field:first-of-type {
+    border-top: none;
+}
+
+.mfl-field-label {
+    font-weight: var(--font-semibold);
+}
+
+.mfl-field-desc {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.mfl-field-control input[type="text"],
+.mfl-field-control input[type="number"],
+.mfl-field-control input[type="date"],
+.mfl-field-control input[type="time"],
+.mfl-field-control textarea {
+    width: 100%;
+}
+
+/* Обязательное поле помечаем звёздочкой — отдельная колонка ради этого
+   не нужна, а без пометки правило видно только после ошибки. */
+.mfl-required::after {
+    content: " *";
+    color: var(--text-accent);
+}
+
+.mfl-textarea .setting-item-control {
+    flex: 1 1 60%;
+}
+
+.mfl-textarea textarea {
+    width: 100%;
+    min-height: 5rem;
+}
+
+.mfl-suggest-path {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.mfl-error {
+    color: var(--text-error);
+    font-size: var(--font-ui-smaller);
+    min-height: 1.2em;
+    padding-top: 0.25rem;
+}
+
+/* === Редактор формы === */
+
+.mfl-wide-modal {
+    width: min(720px, 92vw);
+}
+
+.mfl-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+
+.mfl-field-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.45rem 0.5rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background-color: var(--background-secondary);
+}
+
+.mfl-field-row:hover {
+    border-color: var(--background-modifier-border-hover);
+}
+
+.mfl-field-caption {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex: 1;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.mfl-field-type {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.mfl-options .setting-item {
+    border-top: none;
+    padding: 0.25rem 0;
+}
+
+.mfl-warning {
+    color: var(--text-warning);
+    padding-top: 0.2rem;
+}
+
+.mfl-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 1rem;
+}

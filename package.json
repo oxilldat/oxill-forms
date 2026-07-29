@@ -1,0 +1,20 @@
+{
+    "name": "modal-forms-lite",
+    "version": "0.1.0",
+    "description": "Формы для структурированного ввода данных в Obsidian",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "node esbuild.config.mjs",
+        "build": "node esbuild.config.mjs production",
+        "check": "tsc --noEmit"
+    },
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^22.9.0",
+        "builtin-modules": "^4.0.0",
+        "esbuild": "^0.24.0",
+        "obsidian": "^1.7.2",
+        "typescript": "^5.6.3"
+    }
+}
