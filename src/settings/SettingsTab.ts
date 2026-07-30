@@ -21,16 +21,27 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         super(app, plugin);
     }
 
+    /**
+     * Заголовок раздела стоит снаружи карточки, строки настроек — внутри.
+     * Карточку рисует группа, а у строк свой фон снимается: иначе вид
+     * зависел бы от того, что текущая тема делает с отдельными строками.
+     */
+    private group(name: string, description?: string): HTMLElement {
+        const heading = new Setting(this.containerEl).setName(name).setHeading();
+        if (description) heading.setDesc(description);
+        return this.containerEl.createDiv({ cls: "mfl-settings-group" });
+    }
+
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
 
-        new Setting(containerEl)
-            .setName("Формы")
-            .setDesc("Формы хранятся в настройках плагина и вызываются по идентификатору")
-            .setHeading();
+        const forms = this.group(
+            "Формы",
+            "Формы хранятся в настройках плагина и вызываются по идентификатору",
+        );
 
-        new Setting(containerEl)
+        new Setting(forms)
             .setName("Браузер форм")
             .setDesc("Список форм с папками и карточками: правка, дублирование, удаление")
             .addButton((button) =>
@@ -45,12 +56,13 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                     .onClick(() => this.plugin.openCreateFormModal()),
             );
 
-        this.renderImportSetting();
-        this.renderExportSetting();
+        this.renderImportSetting(forms);
+        this.renderExportSetting(forms);
 
-        new Setting(containerEl).setName("Вложения").setHeading();
+        const attachments = this.group("Вложения");
 
         this.renderFolderSetting(
+            attachments,
             "Место сохранения фотографий",
             "Куда попадают JPEG, PNG и WebP из полей типа «Изображение»",
             this.plugin.settings.imageFolder,
@@ -58,15 +70,16 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         );
 
         this.renderFolderSetting(
+            attachments,
             "Место сохранения файлов",
             "Куда попадает всё остальное из полей типа «Файл»",
             this.plugin.settings.fileFolder,
             (folder) => this.plugin.updateSettings({ fileFolder: folder }),
         );
 
-        new Setting(containerEl).setName("Дополнительно").setHeading();
+        const extra = this.group("Дополнительно");
 
-        new Setting(containerEl)
+        new Setting(extra)
             .setName("Не спрашивать при закрытии без сохранения")
             .setDesc(
                 "Редактор формы и редактор поля будут закрываться сразу. " +
@@ -80,11 +93,11 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                     ),
             );
 
-        this.renderDataviewSetting();
+        this.renderDataviewSetting(extra);
 
-        new Setting(containerEl).setName("Заметки").setHeading();
+        const notes = this.group("Заметки");
 
-        new Setting(containerEl)
+        new Setting(notes)
             .setName("Автоматически обновлять заметки при изменении формы")
             .setDesc(
                 "Если переименовать поле, плагин сразу переименует ключ во frontmatter " +
@@ -101,7 +114,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
             );
 
         // Кнопка нужна только в ручном режиме: при автоматическом чинить нечего.
-        if (!this.plugin.settings.autoUpdateNotes) this.renderScanSetting();
+        if (!this.plugin.settings.autoUpdateNotes) this.renderScanSetting(notes);
     }
 
     /**
@@ -109,8 +122,8 @@ export class ModalFormsSettingTab extends PluginSettingTab {
      * Разделено намеренно — правка frontmatter необратима, и увидеть объём
      * до применения важнее, чем сэкономить нажатие.
      */
-    private renderScanSetting(): void {
-        const setting = new Setting(this.containerEl).setName("Заметки со старыми полями");
+    private renderScanSetting(container: HTMLElement): void {
+        const setting = new Setting(container).setName("Заметки со старыми полями");
 
         if (this.found === null) {
             setting.setDesc("Проверить, остались ли заметки с прежними названиями полей");
@@ -177,8 +190,8 @@ export class ModalFormsSettingTab extends PluginSettingTab {
     }
 
     /** Импорт форм из конверта — отдельной строкой, в пару к экспорту. */
-    private renderImportSetting(): void {
-        new Setting(this.containerEl)
+    private renderImportSetting(container: HTMLElement): void {
+        new Setting(container)
             .setName("Импорт форм")
             .setDesc("Вставить конверт форм из другого хранилища")
             .addButton((button) =>
@@ -187,10 +200,10 @@ export class ModalFormsSettingTab extends PluginSettingTab {
     }
 
     /** Экспорт всех форм разом: перенос в другое хранилище одним движением. */
-    private renderExportSetting(): void {
+    private renderExportSetting(container: HTMLElement): void {
         const forms = this.plugin.settings.forms;
 
-        const setting = new Setting(this.containerEl)
+        const setting = new Setting(container)
             .setName("Экспорт всех форм")
             .setDesc(`В конверт попадут все формы (${forms.length}) и версия плагина`);
 
@@ -234,10 +247,10 @@ export class ModalFormsSettingTab extends PluginSettingTab {
      * Переключатель полей Dataview. Если самого плагина нет, включать нечего —
      * запрос всё равно не выполнить, поэтому переключатель блокируем.
      */
-    private renderDataviewSetting(): void {
+    private renderDataviewSetting(container: HTMLElement): void {
         const available = isDataviewAvailable(this.app);
 
-        const setting = new Setting(this.containerEl)
+        const setting = new Setting(container)
             .setName("Разрешить поля «Список из запроса Dataview»")
             .setDesc(
                 available
@@ -264,12 +277,13 @@ export class ModalFormsSettingTab extends PluginSettingTab {
      * Пустое поле означает корень хранилища.
      */
     private renderFolderSetting(
+        container: HTMLElement,
         name: string,
         description: string,
         value: string,
         save: (folder: string) => Promise<void>,
     ): void {
-        new Setting(this.containerEl)
+        new Setting(container)
             .setName(name)
             .setDesc(description)
             .addText((text) => {

@@ -284,6 +284,38 @@
     padding: 0.2rem 0 0.2rem 1rem;
 }
 
+/* === Вкладка настроек: группы-карточки ===
+
+   Заголовок раздела стоит снаружи карточки, строки настроек — внутри неё.
+   Карточку рисует сама группа, а у строк фон и скругления снимаются: иначе
+   вид зависел бы от того, что текущая тема делает с отдельными строками. */
+
+.mfl-settings-group {
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-l, 12px);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.mfl-settings-group .setting-item {
+    background: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.mfl-settings-group .setting-item:first-child {
+    border-top: none;
+}
+
+/* Заголовок группы висит над карточкой, поэтому линия сверху ему не нужна. */
+.mfl-settings-group + .setting-item.setting-item-heading,
+.setting-item.setting-item-heading {
+    border-top: none;
+    padding-bottom: 0.4rem;
+}
+
 .mfl-setting-disabled .setting-item-name {
     color: var(--text-muted);
 }
