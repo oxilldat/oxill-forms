@@ -1,5 +1,6 @@
 import { App, TFile } from "obsidian";
 import { isDataviewAvailable } from "./core/dataview";
+import { defaultValues } from "./core/defaults";
 import { findForm } from "./core/forms";
 import { valuesFromFrontmatter } from "./core/prefill";
 import { FormResult } from "./core/FormResult";
@@ -60,7 +61,10 @@ export class ModalFormsApi {
         }
 
         const settings = this.getSettings();
+        // От общего к частному: настройки формы, потом открытая заметка,
+        // потом то, что явно передали из кода.
         const initial = {
+            ...defaultValues(definition.fields),
             ...this.valuesFromNote(definition, options.fromNote),
             ...(options.values ?? {}),
         };

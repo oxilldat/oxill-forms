@@ -102,6 +102,18 @@ export class FieldEditorModal extends Modal {
                     }),
             );
 
+        new Setting(contentEl)
+            .setName("Значение по умолчанию")
+            .setDesc("Чем поле заполнено при открытии. Понимает {{today}}, {{now}}, {{datetime}}")
+            .addText((text) =>
+                text
+                    .setPlaceholder("например, {{today}}")
+                    .setValue(this.draft.default ?? "")
+                    .onChange((value) => {
+                        this.draft.default = value;
+                    }),
+            );
+
         new Setting(contentEl).setName("Обязательное").addToggle((toggle) =>
             toggle.setValue(this.draft.required === true).onChange((value) => {
                 this.draft.required = value;

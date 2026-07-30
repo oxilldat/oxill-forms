@@ -18,6 +18,7 @@ export interface FormMeta {
     name: string;
     title: string;
     command?: FormCommand;
+    template?: string;
 }
 
 interface FormMetaOptions {
@@ -39,8 +40,10 @@ export class FormMetaModal extends Modal {
     private name: string;
     private title: string;
     private command: FormCommand;
+    private template: string;
     private readonly fields: FieldDefinition[];
     private commandEl: HTMLElement | null = null;
+    private templateInput: HTMLTextAreaElement | null = null;
     private errorEl: HTMLElement | null = null;
     private nameInput: TextComponent | null = null;
 
@@ -54,6 +57,7 @@ export class FormMetaModal extends Modal {
         this.command = options.form?.command
             ? { ...options.form.command }
             : defaultCommand();
+        this.template = options.form?.template ?? "";
         this.fields = options.form?.fields ?? [];
     }
 
@@ -110,6 +114,27 @@ export class FormMetaModal extends Modal {
         this.commandEl = contentEl.createDiv();
         this.renderCommand();
 
+        new Setting(contentEl)
+            .setName("Шаблон заметки")
+            .setDesc(
+                "Вид заметки с подстановками. Пусто — используется формат выше. " +
+                    "Особые: {{frontmatter}} — вся шапка разом, {{cursor}} — куда встанет курсор",
+            )
+            .setHeading();
+
+        this.renderFieldHints(contentEl);
+
+        new Setting(contentEl).setClass("mfl-textarea").addTextArea((area) => {
+            area.inputEl.rows = 10;
+            area.inputEl.addClass("mfl-template-input");
+            this.templateInput = area.inputEl;
+            area.setPlaceholder("---\n{{frontmatter}}\n---\n\n# {{ title }}\n")
+                .setValue(this.template)
+                .onChange((value) => {
+                    this.template = value;
+                });
+        });
+
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 
         new Setting(contentEl)
@@ -130,6 +155,38 @@ export class FormMetaModal extends Modal {
 
         // Курсор сразу в первом поле — иначе до него надо тянуться мышью.
         window.setTimeout(() => this.nameInput?.inputEl.focus(), 0);
+    }
+
+    /**
+     * Список доступных подстановок. Кликом вставляется в шаблон — имена полей
+     * держать в голове не нужно, а опечатка в имени видна только в заметке.
+     */
+    private renderFieldHints(container: HTMLElement): void {
+        const box = container.createDiv({ cls: "mfl-hints" });
+        const tokens = [
+            "frontmatter",
+            ...this.fields.map((field) => field.name),
+            "cursor",
+        ];
+
+        for (const token of tokens) {
+            const chip = box.createDiv({ cls: "mfl-hint", text: `{{${token}}}` });
+            chip.addEventListener("click", () => this.insertToken(`{{${token}}}`));
+        }
+    }
+
+    private insertToken(token: string): void {
+        const input = this.templateInput;
+        if (!input) return;
+
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? start;
+        input.value = input.value.slice(0, start) + token + input.value.slice(end);
+        this.template = input.value;
+
+        const caret = start + token.length;
+        input.setSelectionRange(caret, caret);
+        input.focus();
     }
 
     private renderCommand(): void {
@@ -217,10 +274,12 @@ export class FormMetaModal extends Modal {
 
         this.close();
         // Пустой заголовок — не ошибка: подставляем идентификатор.
+        const template = this.template.trim();
         this.options.onSubmit({
             name,
             title: title === "" ? name : title,
             command: this.command,
+            template: template === "" ? undefined : this.template,
         });
     }
 

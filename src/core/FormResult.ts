@@ -27,6 +27,12 @@ export class FormResult {
     constructor(
         private readonly data: FormData,
         readonly status: FormStatus,
+        /**
+         * Поля, которые пользователь видел и оставил пустыми. Нужны режиму
+         * правки заметки: очищенное поле должно исчезнуть из шапки, а не
+         * молча сохранить прежнее значение.
+         */
+        readonly cleared: string[] = [],
     ) {}
 
     /** Форму отправили, а не закрыли. Проверять стоит всегда. */

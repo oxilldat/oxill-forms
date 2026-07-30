@@ -77,6 +77,11 @@ export interface FieldDefinition {
     description?: string;
     /** Серый текст внутри пустого поля: подсказка, чего от пользователя ждут. */
     placeholder?: string;
+    /**
+     * Чем поле заполнено при открытии формы. Понимает подстановки
+     * `{{today}}`, `{{now}}` и `{{datetime}}`.
+     */
+    default?: string;
     required?: boolean;
     /**
      * Служебное поле: в форме не рисуется, но значение можно передать через
@@ -109,11 +114,12 @@ export const OUTPUT_FORMAT_LABELS: Record<OutputFormat, string> = {
 };
 
 /** Что делает команда формы. */
-export type CommandMode = "insert" | "create";
+export type CommandMode = "update" | "create" | "insert";
 
 export const COMMAND_MODE_LABELS: Record<CommandMode, string> = {
-    insert: "Вставить в текущую заметку",
+    update: "Изменить шапку текущей заметки",
     create: "Создать новую заметку",
+    insert: "Вставить текстом по месту курсора",
 };
 
 export interface FormCommand {
@@ -138,6 +144,12 @@ export interface FormDefinition {
     version: number;
     /** Команда «Заполнить: …» в палитре. Без неё форма открывается только из кода. */
     command?: FormCommand;
+    /**
+     * Вид заметки с подстановками `{{ поле }}`. Особые: `{{frontmatter}}` —
+     * вся шапка YAML разом, `{{cursor}}` — куда встанет курсор после вставки.
+     * Пустой шаблон означает вывод одним из готовых форматов.
+     */
+    template?: string;
     /** История переименований, по ней ищутся заметки под починку. */
     renames?: FieldRename[];
     fields: FieldDefinition[];

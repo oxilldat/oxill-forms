@@ -1,6 +1,7 @@
-import { App, Notice, Plugin } from "obsidian";
+import { App, Editor, Notice, Plugin, TFile } from "obsidian";
 import { ModalFormsApi } from "./api";
 import { sanitizeFileName } from "./core/attachments";
+import { renderNote } from "./core/format";
 import { isDataviewAvailable } from "./core/dataview";
 import * as formsRepo from "./core/forms";
 import { applyNoteUpdates, scanNotes } from "./core/noteMigration";
@@ -176,30 +177,91 @@ export default class ModalFormsLitePlugin extends Plugin {
         const command = form?.command;
         if (!form || !command?.enabled) return;
 
+        const id = `fill-${name}`;
+        const label = `Заполнить: ${form.title}`;
+
         if (command.mode === "create") {
             this.addCommand({
-                id: `fill-${name}`,
-                name: `Заполнить: ${form.title}`,
+                id,
+                name: label,
                 // Заметку создаём сами, поэтому открытый редактор не нужен.
                 callback: () => void this.createNoteFromForm(form, command),
             });
+        } else if (command.mode === "update") {
+            this.addCommand({
+                id,
+                name: label,
+                editorCallback: (_editor, context) => {
+                    const file = context.file;
+                    if (!file) {
+                        new Notice("Команда работает только в открытой заметке");
+                        return;
+                    }
+                    void this.updateNoteFromForm(form, file);
+                },
+            });
         } else {
             this.addCommand({
-                id: `fill-${name}`,
-                name: `Заполнить: ${form.title}`,
+                id,
+                name: label,
                 // editorCallback — команда видна только когда открыт редактор:
                 // вставлять результат больше некуда.
-                editorCallback: (editor) => {
-                    // Курсор стоит в заметке — значит её шапка и есть то, что
-                    // пользователь собирается дополнить или поправить.
-                    this.api.openForm(name, { fromNote: true }).then((result) => {
-                        if (!result.ok) return;
-                        editor.replaceSelection(formatResult(result, command.format));
-                    });
-                },
+                editorCallback: (editor) => void this.insertFromForm(form, command, editor),
             });
         }
         this.formCommands.add(name);
+    }
+
+    /**
+     * Режим «изменить»: значения формы уезжают в шапку текущей заметки.
+     * Форма открывается уже заполненной из этой же шапки, поэтому правишь
+     * то, что видишь, а не вбиваешь всё заново.
+     */
+    private async updateNoteFromForm(form: FormDefinition, file: TFile): Promise<void> {
+        const result = await this.api.openForm(form.name, { fromNote: true });
+        if (!result.ok) return;
+
+        const data = result.getData();
+        try {
+            await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+                for (const [key, value] of Object.entries(data)) {
+                    frontmatter[key] = value;
+                }
+                // Поле, которое было на экране и осталось пустым, пользователь
+                // очистил намеренно — убираем ключ, а не оставляем старое.
+                for (const key of result.cleared) {
+                    delete frontmatter[key];
+                }
+            });
+            new Notice(`Шапка заметки «${file.basename}» обновлена`);
+        } catch (error) {
+            console.error("[modal-forms-lite] не удалось обновить шапку", error);
+            new Notice("Не удалось обновить шапку заметки. Подробности в консоли");
+        }
+    }
+
+    /** Режим «вставить»: шаблон формы или готовый формат по месту курсора. */
+    private async insertFromForm(
+        form: FormDefinition,
+        command: FormCommand,
+        editor: Editor,
+    ): Promise<void> {
+        const result = await this.api.openForm(form.name, { fromNote: true });
+        if (!result.ok) return;
+
+        if (!form.template) {
+            editor.replaceSelection(formatResult(result, command.format));
+            return;
+        }
+
+        const note = renderNote(form.template, result.getData(), result.asFrontmatter());
+        const from = editor.getCursor("from");
+        editor.replaceSelection(note.text);
+
+        // Метка {{cursor}} в шаблоне: ставим курсор туда, а не в конец вставки.
+        if (note.cursor !== undefined) {
+            editor.setCursor(editor.offsetToPos(editor.posToOffset(from) + note.cursor));
+        }
     }
 
     /** Режим «создать заметку»: спросить форму, сложить файл, открыть его. */
@@ -212,11 +274,17 @@ export default class ModalFormsLitePlugin extends Plugin {
             : "";
         const baseName = sanitizeFileName(fromField === "" ? form.title : fromField);
 
-        const body = formatResult(result, command.format);
-        const content =
-            command.format === "frontmatter"
-                ? `---\n${body}\n---\n\n# ${baseName}\n`
-                : `# ${baseName}\n\n${body}\n`;
+        // Шаблон формы важнее готовых форматов: он и написан ради этого.
+        let content: string;
+        if (form.template) {
+            content = renderNote(form.template, result.getData(), result.asFrontmatter()).text;
+        } else {
+            const body = formatResult(result, command.format);
+            content =
+                command.format === "frontmatter"
+                    ? `---\n${body}\n---\n\n# ${baseName}\n`
+                    : `# ${baseName}\n\n${body}\n`;
+        }
 
         try {
             const file = await createNote(this.app, command.folder ?? "", baseName, content);
@@ -247,8 +315,8 @@ export default class ModalFormsLitePlugin extends Plugin {
     openCreateFormModal(): void {
         new FormMetaModal(this.app, {
             isNameTaken: (name) => this.isNameTaken(name),
-            onSubmit: async ({ name, title, command }) => {
-                await this.upsertForm({ name, title, version: 1, command, fields: [] });
+            onSubmit: async ({ name, title, command, template }) => {
+                await this.upsertForm({ name, title, version: 1, command, template, fields: [] });
                 new Notice(`Форма «${title}» создана`);
             },
         }).open();

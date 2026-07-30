@@ -1,4 +1,5 @@
 import type {
+    CommandMode,
     ConditionKind,
     FieldCondition,
     FieldDefinition,
@@ -104,6 +105,10 @@ function parseForm(raw: unknown): FormDefinition | null {
     const command = parseCommand(raw.command);
     if (command) form.command = command;
 
+    if (typeof raw.template === "string" && raw.template.trim() !== "") {
+        form.template = raw.template;
+    }
+
     const renames = parseRenames(raw.renames);
     if (renames.length > 0) form.renames = renames;
 
@@ -120,7 +125,7 @@ function parseCommand(raw: unknown): FormCommand | null {
 
     const command: FormCommand = {
         enabled: raw.enabled === true,
-        mode: raw.mode === "create" ? "create" : "insert",
+        mode: isCommandMode(raw.mode) ? raw.mode : "insert",
         format: isOutputFormat(raw.format) ? raw.format : "dataview",
     };
 
@@ -131,6 +136,10 @@ function parseCommand(raw: unknown): FormCommand | null {
     if (nameField !== "") command.nameField = nameField;
 
     return command;
+}
+
+function isCommandMode(value: unknown): value is CommandMode {
+    return value === "update" || value === "create" || value === "insert";
 }
 
 function isOutputFormat(value: unknown): value is OutputFormat {
@@ -160,6 +169,7 @@ function parseField(raw: unknown): FieldDefinition | null {
     if (typeof raw.label === "string") field.label = raw.label;
     if (typeof raw.description === "string") field.description = raw.description;
     if (typeof raw.placeholder === "string") field.placeholder = raw.placeholder;
+    if (typeof raw.default === "string") field.default = raw.default;
     if (raw.required === true) field.required = true;
     if (raw.hidden === true) field.hidden = true;
 

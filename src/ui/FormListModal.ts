@@ -120,8 +120,11 @@ export class FormListModal extends Modal {
         new FormMetaModal(this.app, {
             form,
             isNameTaken: (name) => this.plugin.isNameTaken(name, form.name),
-            onSubmit: async ({ name, title, command }) => {
-                await this.plugin.upsertForm({ ...form, name, title, command }, form.name);
+            onSubmit: async ({ name, title, command, template }) => {
+                await this.plugin.upsertForm(
+                    { ...form, name, title, command, template },
+                    form.name,
+                );
                 this.renderList();
             },
         }).open();

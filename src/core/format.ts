@@ -42,6 +42,37 @@ export function asListText(data: FormData): string {
  * Неизвестный ключ и неизвестное преобразование оставляют шаблон нетронутым —
  * так опечатка сразу видна в тексте, а не превращается в пустое место.
  */
+/** Метка места курсора в шаблоне. Из готового текста вырезается. */
+export const CURSOR_TOKEN = /\{\{\s*cursor\s*\}\}/;
+
+export interface RenderedNote {
+    text: string;
+    /** Смещение курсора от начала текста, если в шаблоне была метка. */
+    cursor?: number;
+}
+
+/**
+ * Шаблон заметки. Кроме обычных полей понимает две особые подстановки:
+ * `{{frontmatter}}` — вся шапка YAML разом, чтобы не перечислять поля
+ * руками, и `{{cursor}}` — куда встанет курсор после вставки.
+ */
+export function renderNote(
+    template: string,
+    data: FormData,
+    frontmatter: string,
+): RenderedNote {
+    const withFrontmatter = template.replace(/\{\{\s*frontmatter\s*\}\}/g, frontmatter);
+    const rendered = renderTemplate(withFrontmatter, data);
+
+    const match = CURSOR_TOKEN.exec(rendered);
+    if (!match) return { text: rendered };
+
+    return {
+        text: rendered.replace(CURSOR_TOKEN, ""),
+        cursor: match.index,
+    };
+}
+
 export function renderTemplate(template: string, data: FormData): string {
     return template.replace(
         /\{\{\s*(\w+)\s*(?:\|\s*(\w+)\s*)?\}\}/g,

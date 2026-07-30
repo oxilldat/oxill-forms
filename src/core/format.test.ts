@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { asDataviewText, asListText, renderTemplate, selectFields } from "./format";
+import { asDataviewText, asListText, renderNote, renderTemplate, selectFields } from "./format";
 import type { FormData } from "./FormResult";
 
 const data: FormData = {
@@ -58,6 +58,19 @@ test("ноль и false выводятся, а не считаются пуст�
     const withZero: FormData = { score: 0, favorite: false };
     assert.equal(renderTemplate("{{ score }} / {{ favorite }}", withZero), "0 / false");
     assert.equal(asDataviewText(withZero), "score:: 0\nfavorite:: false");
+});
+
+test("renderNote подставляет шапку целиком", () => {
+    const note = renderNote("---\n{{frontmatter}}\n---\n\n# {{ person }}", data, "person: Мария");
+    assert.equal(note.text, "---\nperson: Мария\n---\n\n# Мария Сидорова");
+    assert.equal(note.cursor, undefined);
+});
+
+test("renderNote вырезает метку курсора и запоминает её место", () => {
+    const note = renderNote("# {{ person }}\n\n{{cursor}}конец", data, "");
+    assert.equal(note.text, "# Мария Сидорова\n\nконец");
+    // Курсор встаёт ровно перед словом «конец».
+    assert.equal(note.text.slice(note.cursor), "конец");
 });
 
 test("renderTemplate обрабатывает несколько подстановок в одной строке", () => {

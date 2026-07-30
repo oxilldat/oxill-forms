@@ -49,6 +49,33 @@
     min-height: 5rem;
 }
 
+/* Подстановки, доступные в шаблоне: вставляются кликом. */
+.mfl-hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    padding: 0.2rem 0 0.5rem;
+}
+
+.mfl-hint {
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-s);
+    background-color: var(--background-modifier-hover);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    cursor: pointer;
+}
+
+.mfl-hint:hover {
+    background-color: var(--background-modifier-active-hover);
+}
+
+.mfl-template-input {
+    width: 100%;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+}
+
 /* Показ чужого кода перед импортом формы. */
 .mfl-code-label {
     color: var(--text-muted);

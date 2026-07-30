@@ -431,7 +431,18 @@ export class FormModal extends Modal {
             return;
         }
 
-        this.answer(new FormResult(this.collectData(), "ok"));
+        this.answer(new FormResult(this.collectData(), "ok", this.collectCleared()));
+    }
+
+    /**
+     * Поля, которые были на экране и остались пустыми. Скрытые условием сюда
+     * не попадают: пользователь их не видел и очистить не мог.
+     */
+    private collectCleared(): string[] {
+        return this.form.fields
+            .filter((field) => !field.hidden && this.isShown(field))
+            .filter((field) => this.isEmpty(this.values[field.name]))
+            .map((field) => field.name);
     }
 
     private isEmpty(value: FieldValue | undefined): boolean {
