@@ -117,11 +117,8 @@ export class ModalFormsSettingTab extends PluginSettingTab {
             return;
         }
 
-        const names = this.found.map((update) => update.file.path);
-        const preview = names.slice(0, 5).join(", ");
-        setting.setDesc(
-            `Найдено: ${names.length}. ${preview}${names.length > 5 ? " и другие" : ""}`,
-        );
+        const count = this.found.length;
+        setting.setDesc("Заметки с прежними названиями полей готовы к обновлению");
 
         setting.addButton((button) =>
             button.setButtonText("Отмена").onClick(() => {
@@ -132,7 +129,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
 
         setting.addButton((button) =>
             button
-                .setButtonText(`Обновить заметки (${names.length})`)
+                .setButtonText(`Обновить заметки (${count})`)
                 .setCta()
                 .onClick(async () => {
                     const updates = this.found ?? [];
