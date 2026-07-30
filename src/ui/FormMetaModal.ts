@@ -15,7 +15,7 @@ import type {
 import { FolderSuggest } from "./FolderSuggest";
 import { IconSuggest } from "./IconSuggest";
 import { restrictToLatin } from "./restrictToLatin";
-import { settingsGroup } from "./settingsGroup";
+import { collapsibleGroup, settingsGroup } from "./settingsGroup";
 import { ValueSuggest } from "./ValueSuggest";
 
 export interface FormMeta {
@@ -135,16 +135,16 @@ export class FormMetaModal extends Modal {
                 );
             });
 
-        new Setting(look)
+        const iconSetting = new Setting(look)
             .setName("Иконка")
-            .setDesc("Показывается на карточке формы")
-            .addExtraButton((button) => {
-                this.iconPreview = button.extraSettingsEl;
-                button.setDisabled(true);
-                this.renderIconPreview();
-                return button;
-            })
-            .addText((text) => {
+            .setDesc("Показывается на карточке формы");
+
+        // Предпросмотр — обычный значок перед полем, а не отключённая кнопка:
+        // кнопкой он выглядел как управление, по которому нечего нажимать.
+        this.iconPreview = iconSetting.controlEl.createSpan({ cls: "mfl-icon-badge" });
+        this.renderIconPreview();
+
+        iconSetting.addText((text) => {
                 text.setPlaceholder(DEFAULT_FORM_ICON)
                     .setValue(this.icon)
                     .onChange((value) => {
@@ -174,11 +174,14 @@ export class FormMetaModal extends Modal {
         this.commandEl = commandGroup.createDiv();
         this.renderCommand();
 
-        const templateGroup = settingsGroup(
+        // Шаблон занимает больше места, чем все прочие группы вместе, и нужен
+        // не всегда: пустой — свёрнут, заполненный — сразу раскрыт.
+        const templateGroup = collapsibleGroup(
             contentEl,
             "Шаблон заметки",
             "Вид заметки с подстановками. Пусто — используется формат выше. " +
                 "Особые: {{frontmatter}} — вся шапка разом, {{cursor}} — куда встанет курсор",
+            this.template.trim() !== "",
         );
 
         this.renderFieldHints(templateGroup);
