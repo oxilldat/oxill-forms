@@ -9,6 +9,7 @@ import type ModalFormsLitePlugin from "../main";
 import { FolderSuggest } from "../ui/FolderSuggest";
 import { FormListModal } from "../ui/FormListModal";
 import { ImportFormModal } from "../ui/ImportFormModal";
+import { settingsGroup } from "../ui/settingsGroup";
 
 export class ModalFormsSettingTab extends PluginSettingTab {
     /** Результат последнего сканирования: null — ещё не искали. */
@@ -21,15 +22,8 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         super(app, plugin);
     }
 
-    /**
-     * Заголовок раздела стоит снаружи карточки, строки настроек — внутри.
-     * Карточку рисует группа, а у строк свой фон снимается: иначе вид
-     * зависел бы от того, что текущая тема делает с отдельными строками.
-     */
     private group(name: string, description?: string): HTMLElement {
-        const heading = new Setting(this.containerEl).setName(name).setHeading();
-        if (description) heading.setDesc(description);
-        return this.containerEl.createDiv({ cls: "mfl-settings-group" });
+        return settingsGroup(this.containerEl, name, description);
     }
 
     display(): void {

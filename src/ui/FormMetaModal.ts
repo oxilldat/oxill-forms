@@ -15,6 +15,7 @@ import type {
 import { FolderSuggest } from "./FolderSuggest";
 import { IconSuggest } from "./IconSuggest";
 import { restrictToLatin } from "./restrictToLatin";
+import { settingsGroup } from "./settingsGroup";
 import { ValueSuggest } from "./ValueSuggest";
 
 export interface FormMeta {
@@ -85,7 +86,9 @@ export class FormMetaModal extends Modal {
             cls: "mfl-title",
         });
 
-        new Setting(contentEl)
+        const main = settingsGroup(contentEl, "Основное");
+
+        new Setting(main)
             .setName("Идентификатор")
             .setDesc("Уникальное имя, по которому форма вызывается из кода. Только латинские буквы")
             .addText((text) => {
@@ -97,7 +100,7 @@ export class FormMetaModal extends Modal {
                 });
             });
 
-        new Setting(contentEl)
+        new Setting(main)
             .setName("Заголовок")
             .setDesc("Что видно в шапке открытой формы")
             .addText((text) =>
@@ -110,7 +113,9 @@ export class FormMetaModal extends Modal {
                     }),
             );
 
-        new Setting(contentEl)
+        const look = settingsGroup(contentEl, "Вид в списке форм");
+
+        new Setting(look)
             .setName("Папка")
             .setDesc("Ярлык для группировки в списке форм. Пусто — форма без папки")
             .addText((text) => {
@@ -130,7 +135,7 @@ export class FormMetaModal extends Modal {
                 );
             });
 
-        new Setting(contentEl)
+        new Setting(look)
             .setName("Иконка")
             .setDesc("Показывается на карточке формы")
             .addExtraButton((button) => {
@@ -152,9 +157,9 @@ export class FormMetaModal extends Modal {
                 });
             });
 
-        new Setting(contentEl).setName("Команда в палитре").setHeading();
+        const commandGroup = settingsGroup(contentEl, "Команда в палитре");
 
-        new Setting(contentEl)
+        new Setting(commandGroup)
             .setName("Добавить команду")
             .setDesc("В палитре появится «Заполнить: …»")
             .addToggle((toggle) =>
@@ -165,20 +170,20 @@ export class FormMetaModal extends Modal {
                 }),
             );
 
-        this.commandEl = contentEl.createDiv();
+        // Настройки режима дорисовываются в ту же карточку.
+        this.commandEl = commandGroup.createDiv();
         this.renderCommand();
 
-        new Setting(contentEl)
-            .setName("Шаблон заметки")
-            .setDesc(
-                "Вид заметки с подстановками. Пусто — используется формат выше. " +
-                    "Особые: {{frontmatter}} — вся шапка разом, {{cursor}} — куда встанет курсор",
-            )
-            .setHeading();
+        const templateGroup = settingsGroup(
+            contentEl,
+            "Шаблон заметки",
+            "Вид заметки с подстановками. Пусто — используется формат выше. " +
+                "Особые: {{frontmatter}} — вся шапка разом, {{cursor}} — куда встанет курсор",
+        );
 
-        this.renderFieldHints(contentEl);
+        this.renderFieldHints(templateGroup);
 
-        new Setting(contentEl).setClass("mfl-textarea").addTextArea((area) => {
+        new Setting(templateGroup).setClass("mfl-textarea").addTextArea((area) => {
             area.inputEl.rows = 10;
             area.inputEl.addClass("mfl-template-input");
             this.templateInput = area.inputEl;

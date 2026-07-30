@@ -17,6 +17,7 @@ import type {
 import { ConfirmModal } from "./ConfirmModal";
 import { FolderSuggest } from "./FolderSuggest";
 import { restrictToLatin } from "./restrictToLatin";
+import { settingsGroup } from "./settingsGroup";
 
 interface FieldEditorOptions {
     field: FieldDefinition;
@@ -226,11 +227,10 @@ export class FieldEditorModal extends Modal {
         container.empty();
 
         const isSection = this.draft.input.type === "section";
-
-        new Setting(container).setName("Основное").setHeading();
+        const main = settingsGroup(container, "Основное");
 
         if (!isSection) {
-            new Setting(container)
+            new Setting(main)
                 .setName("Идентификатор")
                 .setDesc("Ключ в результате формы. Только латинские буквы")
                 .addText((text) => {
@@ -242,7 +242,7 @@ export class FieldEditorModal extends Modal {
                 });
         }
 
-        new Setting(container)
+        new Setting(main)
             .setName(isSection ? "Заголовок раздела" : "Подпись")
             .addText((text) =>
                 text
@@ -253,7 +253,7 @@ export class FieldEditorModal extends Modal {
                     }),
             );
 
-        new Setting(container).setName("Описание").addText((text) =>
+        new Setting(main).setName("Описание").addText((text) =>
             text
                 .setPlaceholder("Пояснение под подписью")
                 .setValue(this.draft.description ?? "")
@@ -263,7 +263,7 @@ export class FieldEditorModal extends Modal {
         );
 
         if (!isSection) {
-            new Setting(container)
+            new Setting(main)
                 .setName("Подсказка в поле")
                 .setDesc("Серый текст внутри пустого поля")
                 .addText((text) =>
@@ -275,7 +275,7 @@ export class FieldEditorModal extends Modal {
                         }),
                 );
 
-            new Setting(container)
+            new Setting(main)
                 .setName("Значение по умолчанию")
                 .setDesc(
                     "Чем поле заполнено при открытии. Понимает {{today}}, {{now}}, {{datetime}}",
@@ -289,16 +289,16 @@ export class FieldEditorModal extends Modal {
                         }),
                 );
 
-            new Setting(container).setName("Поведение").setHeading();
+            const behavior = settingsGroup(container, "Поведение");
 
-            new Setting(container).setName("Обязательное").addToggle((toggle) =>
+            new Setting(behavior).setName("Обязательное").addToggle((toggle) =>
                 toggle.setValue(this.draft.required === true).onChange((value) => {
                     this.draft.required = value;
                     this.clearError();
                 }),
             );
 
-            new Setting(container)
+            new Setting(behavior)
                 .setName("Скрытое")
                 .setDesc(
                     "В форме не показывается. Значение передаётся из кода через " +
@@ -313,10 +313,10 @@ export class FieldEditorModal extends Modal {
                 );
         }
 
-        if (this.hasTypeOptions()) {
-            new Setting(container).setName("Настройки типа").setHeading();
-        }
-        this.optionsEl = container.createDiv();
+        // У типов без своих настроек карточку не заводим — она была бы пустой.
+        this.optionsEl = this.hasTypeOptions()
+            ? settingsGroup(container, "Настройки типа")
+            : container.createDiv();
         this.renderInputOptions();
 
         this.conditionEl = container.createDiv();
@@ -328,21 +328,20 @@ export class FieldEditorModal extends Modal {
      * форме, — иначе на момент проверки значения ещё нет.
      */
     private renderCondition(): void {
-        const container = this.conditionEl;
-        if (!container) return;
-        container.empty();
+        const host = this.conditionEl;
+        if (!host) return;
+        host.empty();
 
         if (this.draft.hidden) return;
 
         const isSection = this.draft.input.type === "section";
         const what = isSection ? "раздел" : "поле";
 
-        new Setting(container).setName("Условие показа").setHeading();
-        if (isSection) {
-            new Setting(container).setDesc(
-                "Скрытый раздел уносит с собой все поля до следующего раздела",
-            );
-        }
+        const container = settingsGroup(
+            host,
+            "Условие показа",
+            isSection ? "Скрытый раздел уносит с собой все поля до следующего раздела" : undefined,
+        );
 
         // Раздел не хранит значения, поэтому зависеть от него бессмысленно.
         const candidates = this.options.otherFields.filter(

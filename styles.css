@@ -309,6 +309,17 @@
     border-top: none;
 }
 
+/* Своих отступов у карточки нет — они есть только у строк настроек. Поэтому
+   всё, что положено в карточку напрямую, повторяет те же отступы, иначе
+   прижималось бы к самому краю и не выравнивалось ни с чем. */
+.mfl-settings-group > .mfl-hints {
+    padding: 0.75rem 1rem 0;
+}
+
+.mfl-settings-group > .mfl-hints + .setting-item {
+    border-top: none;
+}
+
 /* Заголовок группы висит над карточкой, поэтому линия сверху ему не нужна. */
 .mfl-settings-group + .setting-item.setting-item-heading,
 .setting-item.setting-item-heading {
