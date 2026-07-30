@@ -1,3 +1,4 @@
+import { isDecorative } from "./types";
 import { freeNameFrom, isValidName } from "./naming";
 import type { FieldDefinition, InputType, InputTypeName } from "./types";
 
@@ -59,6 +60,7 @@ export function defaultInputFor(type: InputTypeName): InputType {
         case "folder":
         case "image":
         case "file":
+        case "section":
             return { type };
     }
 }
@@ -113,6 +115,13 @@ export function validateField(field: FieldDefinition, others: FieldDefinition[])
         if (input.min >= input.max) return "Минимум ползунка должен быть меньше максимума";
         if (input.step <= 0) return "Шаг ползунка должен быть больше нуля";
         if (input.step > input.max - input.min) return "Шаг больше всего диапазона";
+    }
+
+    // Раздел — просто заголовок: он ничего не спрашивает и ничего не возвращает.
+    if (isDecorative(input.type)) {
+        if (field.required) return "Раздел не может быть обязательным";
+        if (field.hidden) return "Раздел и так не спрашивает значение — прятать его незачем";
+        if ((field.label ?? "").trim() === "") return "У раздела должен быть заголовок";
     }
 
     // Скрытое поле пользователь не заполнит, поэтому обязательным быть не может.

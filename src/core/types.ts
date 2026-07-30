@@ -28,6 +28,11 @@ export type MultiValueTypeName = "multiselect" | "tag";
 
 /** Типы полей ввода, поддерживаемые на текущем этапе. */
 export type InputType =
+    /**
+     * Не поле, а заголовок внутри формы: значения не собирает, нужен чтобы
+     * длинный список полей делился на смысловые блоки.
+     */
+    | { type: "section" }
     | { type: "text" }
     | { type: "textarea" }
     | { type: "email" }
@@ -202,6 +207,7 @@ export interface EditorContext {
  * выпадающем списке редактора, поэтому они сгруппированы по смыслу.
  */
 export const INPUT_TYPE_LABELS: Record<InputTypeName, string> = {
+    section: "Раздел",
     text: "Текст",
     textarea: "Многострочный текст",
     email: "Электронная почта",
@@ -221,3 +227,8 @@ export const INPUT_TYPE_LABELS: Record<InputTypeName, string> = {
     image: "Изображение",
     file: "Файл",
 };
+
+/** Типы, которые ничего не спрашивают у пользователя и не дают значения. */
+export function isDecorative(type: InputTypeName): boolean {
+    return type === "section";
+}

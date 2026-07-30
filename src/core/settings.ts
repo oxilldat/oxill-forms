@@ -217,6 +217,7 @@ function isConditionKind(value: unknown): value is ConditionKind {
 
 function parseInput(raw: Record<string, unknown>): InputType | null {
     switch (raw.type) {
+        case "section":
         case "text":
         case "textarea":
         case "email":
@@ -230,6 +231,7 @@ function parseInput(raw: Record<string, unknown>): InputType | null {
         case "folder":
         case "image":
         case "file":
+        case "section":
             return { type: raw.type };
 
         case "note":

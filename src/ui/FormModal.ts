@@ -1,6 +1,7 @@
 import { App, Modal, Setting } from "obsidian";
 import { IMAGE_ACCEPT, isAllowedImage, saveAttachment, toWikiLink } from "../core/attachments";
 import { conditionMet } from "../core/conditions";
+import { sectionOwners } from "../core/sections";
 import { ConfirmModal } from "./ConfirmModal";
 import { FormResult } from "../core/FormResult";
 import type { FieldValue, FormData } from "../core/FormResult";
@@ -34,8 +35,15 @@ export class FormModal extends Modal {
     private answered = false;
     /** Слепок значений на старте — по нему видно, начал ли пользователь заполнять. */
     private snapshot = "";
-    /** Строки полей с условием — их приходится показывать и скрывать на ходу. */
+    /**
+     * Все отрисованные строки: скрыть может не только своё условие, но и
+     * условие раздела, поэтому пересчитывать приходится каждую.
+     */
     private conditionalRows: { field: FieldDefinition; el: HTMLElement }[] = [];
+    /** Поле → раздел, в котором оно лежит. */
+    private sections = new Map<string, FieldDefinition>();
+    /** Обёртка и место под ошибку для каждого поля — ошибка живёт рядом со своим полем. */
+    private rows = new Map<string, { wrap: HTMLElement; errorEl: HTMLElement }>();
     /** Вложения, записанные за этот сеанс. При отмене отправляются в корзину. */
     private createdAttachments: string[] = [];
 
@@ -59,6 +67,8 @@ export class FormModal extends Modal {
             if (field.input.type === "toggle") this.values[field.name] = false;
             if (field.input.type === "slider") this.values[field.name] = field.input.min;
         }
+
+        this.sections = sectionOwners(form.fields);
 
         // Снимаем после заполнения начальных значений: предзаполненное и
         // значения переключателей — не ввод пользователя.
@@ -146,10 +156,27 @@ export class FormModal extends Modal {
     }
 
     private renderField(container: HTMLElement, field: FieldDefinition): void {
-        const setting = new Setting(container).setName(field.label?.trim() || field.name);
+        // Каждое поле живёт в своей обёртке: под ней место для ошибки, а
+        // условие показа прячет обёртку целиком вместе с этой ошибкой.
+        const wrap = container.createDiv({ cls: "mfl-field-wrap" });
+
+        if (field.input.type === "section") {
+            wrap.addClass("mfl-section");
+            const heading = new Setting(wrap)
+                .setName(field.label?.trim() || field.name)
+                .setHeading();
+            if (field.description) heading.setDesc(field.description);
+            this.conditionalRows.push({ field, el: wrap });
+            return;
+        }
+
+        const setting = new Setting(wrap).setName(field.label?.trim() || field.name);
         if (field.description) setting.setDesc(field.description);
         if (field.required) setting.nameEl.addClass("mfl-required");
-        if (field.condition) this.conditionalRows.push({ field, el: setting.settingEl });
+        this.conditionalRows.push({ field, el: wrap });
+
+        const errorEl = wrap.createDiv({ cls: "mfl-field-error" });
+        this.rows.set(field.name, { wrap, errorEl });
 
         const preset = this.values[field.name];
         const input = field.input;
@@ -312,6 +339,38 @@ export class FormModal extends Modal {
         }
     }
 
+    /** Показывает ошибку под конкретным полем и подсвечивает само поле. */
+    private setFieldError(name: string, message: string): void {
+        const row = this.rows.get(name);
+        if (!row) return;
+        row.wrap.addClass("mfl-invalid");
+        row.errorEl.setText(message);
+    }
+
+    private clearFieldError(name: string): void {
+        const row = this.rows.get(name);
+        if (!row) return;
+        row.wrap.removeClass("mfl-invalid");
+        row.errorEl.setText("");
+    }
+
+    private clearAllFieldErrors(): void {
+        for (const name of this.rows.keys()) this.clearFieldError(name);
+    }
+
+    /**
+     * Показывает ошибки и подводит к первой. Без прокрутки на длинной форме
+     * пользователь видел бы «не отправилось» и не понимал, где именно.
+     */
+    private showErrors(errors: Map<string, string>): void {
+        this.clearAllFieldErrors();
+        for (const [name, message] of errors) this.setFieldError(name, message);
+
+        const first = [...errors.keys()][0];
+        const row = first === undefined ? undefined : this.rows.get(first);
+        row?.wrap.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+
     private renderTextLike(
         setting: Setting,
         field: FieldDefinition,
@@ -408,10 +467,21 @@ export class FormModal extends Modal {
         this.refreshVisibility();
     }
 
-    /** Выполнено ли условие показа. Поля без условия видны всегда. */
-    private isShown(field: FieldDefinition): boolean {
+    /** Выполнено ли собственное условие поля. */
+    private ownConditionMet(field: FieldDefinition): boolean {
         if (!field.condition) return true;
         return conditionMet(field.condition, this.values[field.condition.field]);
+    }
+
+    /**
+     * Видно ли поле. Кроме своего условия учитывается условие раздела: если
+     * скрыт заголовок, скрывается и всё, что под ним, иначе раздел был бы
+     * просто декоративной строчкой.
+     */
+    private isShown(field: FieldDefinition): boolean {
+        const section = this.sections.get(field.name);
+        if (section && !this.ownConditionMet(section)) return false;
+        return this.ownConditionMet(field);
     }
 
     private refreshVisibility(): void {
@@ -454,32 +524,38 @@ export class FormModal extends Modal {
             const known = noteOptions(this.app, field.input.folder).some(
                 (option) => option.value === String(value),
             );
-            if (!known) wrong.push(field.label?.trim() || field.name);
+            // Возвращаем идентификаторы: по ним ошибка кладётся под нужное поле.
+            if (!known) wrong.push(field.name);
         }
         return wrong;
     }
 
     private submit(): void {
-        const wrongNotes = this.unknownNotes();
-        if (wrongNotes.length > 0) {
+        // Ошибки собираем по полям: на длинной форме общая строка внизу не
+        // отвечает на главный вопрос — где именно чинить.
+        const errors = new Map<string, string>();
+
+        for (const name of this.unknownNotes()) {
+            errors.set(name, "Выберите заметку из списка: такой в папке нет");
+        }
+
+        for (const field of this.form.fields) {
+            if (!field.required || !this.isShown(field)) continue;
+            if (!this.isEmpty(this.values[field.name])) continue;
+            if (errors.has(field.name)) continue;
+            errors.set(field.name, "Поле обязательное");
+        }
+
+        if (errors.size > 0) {
+            this.showErrors(errors);
             this.errorEl?.setText(
-                `Выберите заметку из списка: ${wrongNotes.join(", ")}. ` +
-                    "Вписать название, которого нет в папке, нельзя",
+                errors.size === 1 ? "Одно поле требует внимания" : `Полей с ошибками: ${errors.size}`,
             );
             return;
         }
 
-        const missing = this.form.fields.filter(
-            (field) =>
-                field.required &&
-                this.isShown(field) &&
-                this.isEmpty(this.values[field.name]),
-        );
-        if (missing.length > 0) {
-            const names = missing.map((field) => field.label?.trim() || field.name).join(", ");
-            if (this.errorEl) this.errorEl.setText(`Заполните обязательные поля: ${names}`);
-            return;
-        }
+        this.clearAllFieldErrors();
+        this.errorEl?.setText("");
 
         this.answer(new FormResult(this.collectData(), "ok", this.collectCleared()));
     }

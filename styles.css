@@ -232,6 +232,47 @@
     word-break: break-word;
 }
 
+/* === Поля в форме заполнения === */
+
+.mfl-field-wrap .setting-item {
+    border-top: none;
+}
+
+/* Ошибка живёт под своим полем, а не общей строкой внизу окна. */
+.mfl-field-error {
+    color: var(--text-error);
+    font-size: var(--font-ui-smaller);
+    padding: 0 0 0.35rem;
+}
+
+.mfl-field-error:empty {
+    display: none;
+}
+
+.mfl-invalid {
+    border-left: 2px solid var(--text-error);
+    padding-left: 0.5rem;
+    margin-left: -0.5rem;
+    border-radius: var(--radius-s);
+}
+
+.mfl-invalid input,
+.mfl-invalid textarea,
+.mfl-invalid select {
+    border-color: var(--text-error);
+}
+
+/* Раздел: заголовок группы полей внутри формы. */
+.mfl-section .setting-item {
+    padding-bottom: 0.2rem;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.mfl-section:first-child .setting-item {
+    border-top: none;
+    padding-top: 0;
+}
+
 /* Поле, скрытое невыполненным условием. */
 .mfl-hidden {
     display: none;

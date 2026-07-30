@@ -40,6 +40,7 @@ export class FieldEditorModal extends Modal {
     /** Слепок при открытии — по нему понимаем, были ли правки. */
     private readonly snapshot: string;
     private mayClose = false;
+    private bodyEl: HTMLElement | null = null;
     private optionsEl: HTMLElement | null = null;
     private conditionEl: HTMLElement | null = null;
     private errorEl: HTMLElement | null = null;
@@ -61,80 +62,6 @@ export class FieldEditorModal extends Modal {
             cls: "mfl-title",
         });
 
-        new Setting(contentEl)
-            .setName("Идентификатор")
-            .setDesc("Ключ в результате формы. Только латинские буквы")
-            .addText((text) => {
-                text.setPlaceholder("A - z").setValue(this.draft.name);
-                restrictToLatin(text.inputEl, (value) => {
-                    this.draft.name = value;
-                    this.clearError();
-                });
-            });
-
-        new Setting(contentEl).setName("Подпись").addText((text) =>
-            text
-                .setPlaceholder("Что видит пользователь")
-                .setValue(this.draft.label ?? "")
-                .onChange((value) => {
-                    this.draft.label = value;
-                }),
-        );
-
-        new Setting(contentEl).setName("Описание").addText((text) =>
-            text
-                .setPlaceholder("Пояснение под подписью")
-                .setValue(this.draft.description ?? "")
-                .onChange((value) => {
-                    this.draft.description = value;
-                }),
-        );
-
-        new Setting(contentEl)
-            .setName("Подсказка в поле")
-            .setDesc("Серый текст внутри пустого поля")
-            .addText((text) =>
-                text
-                    .setPlaceholder("например, фамилия и имя")
-                    .setValue(this.draft.placeholder ?? "")
-                    .onChange((value) => {
-                        this.draft.placeholder = value;
-                    }),
-            );
-
-        new Setting(contentEl)
-            .setName("Значение по умолчанию")
-            .setDesc("Чем поле заполнено при открытии. Понимает {{today}}, {{now}}, {{datetime}}")
-            .addText((text) =>
-                text
-                    .setPlaceholder("например, {{today}}")
-                    .setValue(this.draft.default ?? "")
-                    .onChange((value) => {
-                        this.draft.default = value;
-                    }),
-            );
-
-        new Setting(contentEl).setName("Обязательное").addToggle((toggle) =>
-            toggle.setValue(this.draft.required === true).onChange((value) => {
-                this.draft.required = value;
-                this.clearError();
-            }),
-        );
-
-        new Setting(contentEl)
-            .setName("Скрытое")
-            .setDesc(
-                "В форме не показывается. Значение передаётся из кода через " +
-                    "openForm(..., { values }) и попадает в результат",
-            )
-            .addToggle((toggle) =>
-                toggle.setValue(this.draft.hidden === true).onChange((value) => {
-                    this.draft.hidden = value;
-                    this.clearError();
-                    this.renderCondition();
-                }),
-            );
-
         new Setting(contentEl).setName("Тип").addDropdown((dropdown) => {
             for (const [type, label] of Object.entries(INPUT_TYPE_LABELS)) {
                 // Dataview прячем, пока он не включён в настройках. Поле, уже
@@ -150,16 +77,15 @@ export class FieldEditorModal extends Modal {
             dropdown.setValue(this.draft.input.type).onChange((value) => {
                 // Настройки старого типа несовместимы с новым — сбрасываем.
                 this.draft.input = defaultInputFor(value as InputTypeName);
-                this.renderInputOptions();
                 this.clearError();
+                // Раздел и обычное поле настраиваются по-разному, поэтому
+                // при смене типа перерисовываем всё, а не только настройки.
+                this.renderBody();
             });
         });
 
-        this.optionsEl = contentEl.createDiv();
-        this.renderInputOptions();
-
-        this.conditionEl = contentEl.createDiv();
-        this.renderCondition();
+        this.bodyEl = contentEl.createDiv();
+        this.renderBody();
 
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 
@@ -275,6 +201,128 @@ export class FieldEditorModal extends Modal {
         }
     }
 
+    /** Типы, у которых есть собственные настройки под выпадающим списком. */
+    private hasTypeOptions(): boolean {
+        const type = this.draft.input.type;
+        return (
+            type === "select" ||
+            type === "multiselect" ||
+            type === "note" ||
+            type === "slider" ||
+            type === "dataview" ||
+            type === "tag" ||
+            type === "image" ||
+            type === "file"
+        );
+    }
+
+    /**
+     * Всё, кроме выбора типа. Разделу не нужны ни идентификатор, ни
+     * обязательность — у него нет значения, он только заголовок.
+     */
+    private renderBody(): void {
+        const container = this.bodyEl;
+        if (!container) return;
+        container.empty();
+
+        const isSection = this.draft.input.type === "section";
+
+        new Setting(container).setName("Основное").setHeading();
+
+        if (!isSection) {
+            new Setting(container)
+                .setName("Идентификатор")
+                .setDesc("Ключ в результате формы. Только латинские буквы")
+                .addText((text) => {
+                    text.setPlaceholder("A - z").setValue(this.draft.name);
+                    restrictToLatin(text.inputEl, (value) => {
+                        this.draft.name = value;
+                        this.clearError();
+                    });
+                });
+        }
+
+        new Setting(container)
+            .setName(isSection ? "Заголовок раздела" : "Подпись")
+            .addText((text) =>
+                text
+                    .setPlaceholder(isSection ? "например, Оценка" : "Что видит пользователь")
+                    .setValue(this.draft.label ?? "")
+                    .onChange((value) => {
+                        this.draft.label = value;
+                    }),
+            );
+
+        new Setting(container).setName("Описание").addText((text) =>
+            text
+                .setPlaceholder("Пояснение под подписью")
+                .setValue(this.draft.description ?? "")
+                .onChange((value) => {
+                    this.draft.description = value;
+                }),
+        );
+
+        if (!isSection) {
+            new Setting(container)
+                .setName("Подсказка в поле")
+                .setDesc("Серый текст внутри пустого поля")
+                .addText((text) =>
+                    text
+                        .setPlaceholder("например, фамилия и имя")
+                        .setValue(this.draft.placeholder ?? "")
+                        .onChange((value) => {
+                            this.draft.placeholder = value;
+                        }),
+                );
+
+            new Setting(container)
+                .setName("Значение по умолчанию")
+                .setDesc(
+                    "Чем поле заполнено при открытии. Понимает {{today}}, {{now}}, {{datetime}}",
+                )
+                .addText((text) =>
+                    text
+                        .setPlaceholder("например, {{today}}")
+                        .setValue(this.draft.default ?? "")
+                        .onChange((value) => {
+                            this.draft.default = value;
+                        }),
+                );
+
+            new Setting(container).setName("Поведение").setHeading();
+
+            new Setting(container).setName("Обязательное").addToggle((toggle) =>
+                toggle.setValue(this.draft.required === true).onChange((value) => {
+                    this.draft.required = value;
+                    this.clearError();
+                }),
+            );
+
+            new Setting(container)
+                .setName("Скрытое")
+                .setDesc(
+                    "В форме не показывается. Значение передаётся из кода через " +
+                        "openForm(..., { values }) и попадает в результат",
+                )
+                .addToggle((toggle) =>
+                    toggle.setValue(this.draft.hidden === true).onChange((value) => {
+                        this.draft.hidden = value;
+                        this.clearError();
+                        this.renderCondition();
+                    }),
+                );
+        }
+
+        if (this.hasTypeOptions()) {
+            new Setting(container).setName("Настройки типа").setHeading();
+        }
+        this.optionsEl = container.createDiv();
+        this.renderInputOptions();
+
+        this.conditionEl = container.createDiv();
+        this.renderCondition();
+    }
+
     /**
      * Условие показа. Зависеть можно только от полей, объявленных выше в
      * форме, — иначе на момент проверки значения ещё нет.
@@ -286,10 +334,23 @@ export class FieldEditorModal extends Modal {
 
         if (this.draft.hidden) return;
 
-        const candidates = this.options.otherFields;
+        const isSection = this.draft.input.type === "section";
+        const what = isSection ? "раздел" : "поле";
+
+        new Setting(container).setName("Условие показа").setHeading();
+        if (isSection) {
+            new Setting(container).setDesc(
+                "Скрытый раздел уносит с собой все поля до следующего раздела",
+            );
+        }
+
+        // Раздел не хранит значения, поэтому зависеть от него бессмысленно.
+        const candidates = this.options.otherFields.filter(
+            (field) => field.input.type !== "section",
+        );
         if (candidates.length === 0) {
             new Setting(container)
-                .setName("Показывать поле")
+                .setName(`Показывать ${what}`)
                 .setDesc("Условие можно задать, когда в форме есть другие поля");
             return;
         }
@@ -297,7 +358,7 @@ export class FieldEditorModal extends Modal {
         const condition = this.draft.condition;
 
         new Setting(container)
-            .setName("Показывать поле")
+            .setName(`Показывать ${what}`)
             .addDropdown((dropdown) => {
                 dropdown.addOption("always", "Всегда");
                 dropdown.addOption("conditional", "При условии");

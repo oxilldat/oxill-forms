@@ -38,6 +38,9 @@ export function conditionsFor(type: InputTypeName): ConditionKind[] {
         case "image":
         case "file":
             return ["isSet"];
+        case "section":
+            // Раздел не хранит значения, зависеть от него не от чего.
+            return [];
         case "text":
         case "textarea":
         case "email":
