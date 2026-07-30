@@ -176,28 +176,58 @@
     padding-top: 0.25rem;
 }
 
-.mfl-icon-option {
-    display: flex;
+
+/* Кнопка выбора значка: сам значок и его имя. */
+.mfl-icon-button {
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
-.mfl-icon-preview {
-    display: flex;
-    color: var(--text-muted);
-}
-
-/* Предпросмотр иконки стоит рядом с подписью строки. */
 .mfl-icon-badge {
     display: inline-flex;
-    vertical-align: text-bottom;
-    margin-left: 8px;
     color: var(--text-muted);
 }
 
-.mfl-icon-badge .svg-icon {
-    width: 1em;
-    height: 1em;
+/* === Выбор значка сеткой === */
+
+.mfl-icon-modal {
+    width: min(520px, 92vw);
+}
+
+.mfl-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 4px;
+    max-height: 45vh;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.mfl-icon-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.mfl-icon-cell:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.mfl-icon-cell.is-active {
+    background-color: var(--background-modifier-active-hover);
+    color: var(--text-accent);
+}
+
+.mfl-icon-note {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    padding-top: 8px;
 }
 
 /* Подстановки, доступные в шаблоне: вставляются кликом. */
@@ -303,18 +333,9 @@
     width: min(680px, 92vw);
 }
 
-.mfl-meta-modal .mfl-settings-group .setting-item-control {
-    flex: 0 0 50%;
-    justify-content: flex-end;
-}
-
-/* Поле занимает всю свою половину и когда стоит одно, и когда делит место
-   со значком иконки. */
-.mfl-meta-modal .mfl-settings-group .setting-item-control input[type="text"],
-.mfl-meta-modal .mfl-settings-group .setting-item-control select {
-    flex: 1;
-    min-width: 0;
-}
+/* Переопределений ширины контролов здесь нет намеренно: строки в окне
+   должны выглядеть ровно так же, как во вкладке настроек. Отдельная
+   пропорция для модалки как раз и растягивала поля и списки. */
 
 /* === Вкладка настроек: группы-карточки ===
 
@@ -376,6 +397,13 @@
     flex-shrink: 0;
     justify-content: flex-end;
     gap: 8px;
+}
+
+/* Выпадающий список по ширине содержимого, а не во всю колонку: растянутый
+   селект с коротким значением выглядит пустым. */
+.mfl-settings-group .setting-item-control select {
+    flex: 0 0 auto;
+    width: auto;
 }
 
 /* Своих отступов у карточки нет — они есть только у строк настроек. Поэтому

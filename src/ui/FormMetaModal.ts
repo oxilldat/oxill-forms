@@ -13,7 +13,7 @@ import type {
     OutputFormat,
 } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
-import { IconSuggest } from "./IconSuggest";
+import { IconPickerModal } from "./IconPickerModal";
 import { restrictToLatin } from "./restrictToLatin";
 import { settingsGroup } from "./settingsGroup";
 import { ValueSuggest } from "./ValueSuggest";
@@ -146,26 +146,23 @@ export class FormMetaModal extends Modal {
                 );
             });
 
-        const iconSetting = new Setting(look).setName("Иконка");
+        // Значок выбирается сеткой, а не набором имени: помнить, что нужный
+        // называется «clipboard-list», нельзя, а список их больше тысячи.
+        new Setting(look).setName("Значок").addButton((button) => {
+            this.iconPreview = button.buttonEl;
+            button.setTooltip("Выбрать значок");
+            this.renderIconPreview();
 
-        // Предпросмотр живёт в левой колонке рядом с подписью: в правой он
-        // отъедал бы место у поля, и оно стало бы уже полей соседних строк,
-        // а в секции все однотипные контролы должны быть одной ширины.
-        this.iconPreview = iconSetting.nameEl.createSpan({ cls: "mfl-icon-badge" });
-        this.renderIconPreview();
-
-        iconSetting.addText((text) => {
-                text.setPlaceholder(DEFAULT_FORM_ICON)
-                    .setValue(this.icon)
-                    .onChange((value) => {
-                        this.icon = value.trim();
+            button.onClick(() => {
+                new IconPickerModal(this.app, {
+                    current: this.icon === "" ? DEFAULT_FORM_ICON : this.icon,
+                    onPick: (icon) => {
+                        this.icon = icon;
                         this.renderIconPreview();
-                    });
-                new IconSuggest(this.app, text.inputEl, (icon) => {
-                    this.icon = icon;
-                    this.renderIconPreview();
-                });
+                    },
+                }).open();
             });
+        });
 
         const commandGroup = settingsGroup(
             contentEl,
@@ -266,11 +263,16 @@ export class FormMetaModal extends Modal {
         input.focus();
     }
 
+    /** Кнопка показывает выбранный значок и его имя. */
     private renderIconPreview(): void {
-        const box = this.iconPreview;
-        if (!box) return;
-        box.empty();
-        setIcon(box, this.icon === "" ? DEFAULT_FORM_ICON : this.icon);
+        const button = this.iconPreview;
+        if (!button) return;
+        button.empty();
+        button.addClass("mfl-icon-button");
+
+        const icon = this.icon === "" ? DEFAULT_FORM_ICON : this.icon;
+        setIcon(button.createSpan({ cls: "mfl-icon-badge" }), icon);
+        button.createSpan({ text: icon });
     }
 
     private renderCommand(): void {
