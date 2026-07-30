@@ -147,10 +147,15 @@ export class FormMetaModal extends Modal {
             );
 
         contentEl.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" && !event.isComposing) {
-                event.preventDefault();
-                this.submit();
-            }
+            if (event.key !== "Enter" || event.isComposing) return;
+
+            // В шаблоне Enter переносит строку — это его основная работа.
+            // Отправка оттуда только с модификатором, как в самой форме.
+            const inTextarea = event.target instanceof HTMLTextAreaElement;
+            if (inTextarea && !(event.ctrlKey || event.metaKey)) return;
+
+            event.preventDefault();
+            this.submit();
         });
 
         // Курсор сразу в первом поле — иначе до него надо тянуться мышью.
@@ -206,14 +211,21 @@ export class FormMetaModal extends Modal {
             });
         });
 
-        new Setting(container).setName("Формат результата").addDropdown((dropdown) => {
-            for (const [format, label] of Object.entries(OUTPUT_FORMAT_LABELS)) {
-                dropdown.addOption(format, label);
-            }
-            dropdown.setValue(this.command.format).onChange((value) => {
-                this.command.format = value as OutputFormat;
-            });
-        });
+        // В режиме правки формат ни при чём: значения пишутся в шапку по
+        // ключам, а не собираются в текст.
+        if (this.command.mode !== "update") {
+            new Setting(container)
+                .setName("Формат результата")
+                .setDesc("Запасной вид вывода. Используется, только если шаблон заметки пуст")
+                .addDropdown((dropdown) => {
+                    for (const [format, label] of Object.entries(OUTPUT_FORMAT_LABELS)) {
+                        dropdown.addOption(format, label);
+                    }
+                    dropdown.setValue(this.command.format).onChange((value) => {
+                        this.command.format = value as OutputFormat;
+                    });
+                });
+        }
 
         if (this.command.mode !== "create") return;
 

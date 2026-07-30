@@ -218,11 +218,20 @@ export class FormModal extends Modal {
                         ? input.options
                         : noteOptions(this.app, input.folder);
                 setting.addDropdown((dropdown) => {
-                    dropdown.addOption("", "—");
+                    // Пустой пункт нужен только там, где ответ можно не давать.
+                    // У обязательного поля он был бы ловушкой.
+                    if (!field.required) dropdown.addOption("", "—");
                     for (const option of options) {
                         dropdown.addOption(option.value, option.label);
                     }
-                    dropdown.setValue(preset === undefined ? "" : String(preset));
+                    const initial =
+                        preset === undefined
+                            ? field.required
+                                ? (options[0]?.value ?? "")
+                                : ""
+                            : String(preset);
+                    dropdown.setValue(initial);
+                    this.setValue(field.name, initial);
                     dropdown.onChange((value) => this.setValue(field.name, value));
                 });
                 break;
@@ -265,9 +274,17 @@ export class FormModal extends Modal {
                 });
                 break;
 
-            case "note":
+            case "note": {
+                const available = noteOptions(this.app, input.folder);
                 setting.addText((text) => {
-                    if (hint !== "") text.setPlaceholder(hint);
+                    text.setPlaceholder(
+                        available.length === 0
+                            ? `В папке «${input.folder}» нет заметок`
+                            : hint !== ""
+                              ? hint
+                              : "Начните вводить название",
+                    );
+                    if (available.length === 0) text.setDisabled(true);
                     if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
                     new NoteSuggest(this.app, text.inputEl, input.folder, (basename) =>
@@ -275,6 +292,7 @@ export class FormModal extends Modal {
                     );
                 });
                 break;
+            }
 
             case "folder":
                 setting.addText((text) => {
@@ -418,7 +436,39 @@ export class FormModal extends Modal {
         return data;
     }
 
+    /**
+     * Поле «заметка из папки» обязано содержать существующую заметку.
+     * Подсказка не мешает набрать что угодно руками, поэтому проверяем на
+     * отправке: иначе в заметку уехала бы ссылка в никуда.
+     */
+    private unknownNotes(): string[] {
+        const wrong: string[] = [];
+
+        for (const field of this.form.fields) {
+            if (field.input.type !== "note") continue;
+            if (field.hidden || !this.isShown(field)) continue;
+
+            const value = this.values[field.name];
+            if (value === undefined || value === "") continue;
+
+            const known = noteOptions(this.app, field.input.folder).some(
+                (option) => option.value === String(value),
+            );
+            if (!known) wrong.push(field.label?.trim() || field.name);
+        }
+        return wrong;
+    }
+
     private submit(): void {
+        const wrongNotes = this.unknownNotes();
+        if (wrongNotes.length > 0) {
+            this.errorEl?.setText(
+                `Выберите заметку из списка: ${wrongNotes.join(", ")}. ` +
+                    "Вписать название, которого нет в папке, нельзя",
+            );
+            return;
+        }
+
         const missing = this.form.fields.filter(
             (field) =>
                 field.required &&

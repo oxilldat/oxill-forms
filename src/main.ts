@@ -45,6 +45,7 @@ export default class ModalFormsLitePlugin extends Plugin {
     api!: ModalFormsApi;
     /** Имена форм, для которых сейчас зарегистрирована команда. */
     private formCommands = new Set<string>();
+    private commandRemovalWarned = false;
 
     async onload(): Promise<void> {
         this.settings = parseSettings(await this.loadData());
@@ -158,17 +159,14 @@ export default class ModalFormsLitePlugin extends Plugin {
      * иначе оставило бы в палитре команду-призрак.
      */
     private syncFormCommands(): void {
-        const wanted = new Set(
-            this.settings.forms
-                .filter((form) => form.command?.enabled === true)
-                .map((form) => form.name),
-        );
+        // Перерегистрируем всё целиком, а не только появившееся и исчезнувшее.
+        // У формы мог поменяться режим команды, а он определяет, какой
+        // обработчик вешать: оставленная на месте команда работала бы по
+        // старым правилам до перезапуска Obsidian.
+        for (const name of [...this.formCommands]) this.removeFormCommand(name);
 
-        for (const name of [...this.formCommands]) {
-            if (!wanted.has(name)) this.removeFormCommand(name);
-        }
-        for (const name of wanted) {
-            if (!this.formCommands.has(name)) this.addFormCommand(name);
+        for (const form of this.settings.forms) {
+            if (form.command?.enabled === true) this.addFormCommand(form.name);
         }
     }
 
@@ -185,7 +183,10 @@ export default class ModalFormsLitePlugin extends Plugin {
                 id,
                 name: label,
                 // Заметку создаём сами, поэтому открытый редактор не нужен.
-                callback: () => void this.createNoteFromForm(form, command),
+                callback: () => {
+                    const fresh = this.freshForm(name);
+                    if (fresh) void this.createNoteFromForm(fresh, fresh.command!);
+                },
             });
         } else if (command.mode === "update") {
             this.addCommand({
@@ -197,7 +198,8 @@ export default class ModalFormsLitePlugin extends Plugin {
                         new Notice("Команда работает только в открытой заметке");
                         return;
                     }
-                    void this.updateNoteFromForm(form, file);
+                    const fresh = this.freshForm(name);
+                    if (fresh) void this.updateNoteFromForm(fresh, file);
                 },
             });
         } else {
@@ -206,10 +208,22 @@ export default class ModalFormsLitePlugin extends Plugin {
                 name: label,
                 // editorCallback — команда видна только когда открыт редактор:
                 // вставлять результат больше некуда.
-                editorCallback: (editor) => void this.insertFromForm(form, command, editor),
+                editorCallback: (editor) => {
+                    const fresh = this.freshForm(name);
+                    if (fresh) void this.insertFromForm(fresh, fresh.command!, editor);
+                },
             });
         }
         this.formCommands.add(name);
+    }
+
+    /**
+     * Форма на момент нажатия, а не на момент регистрации команды. Иначе
+     * добавленный позже шаблон и правки полей до команды не доезжали.
+     */
+    private freshForm(name: string): FormDefinition | undefined {
+        const form = formsRepo.findForm(this.settings.forms, name);
+        return form?.command?.enabled === true ? form : undefined;
     }
 
     /**
@@ -309,7 +323,13 @@ export default class ModalFormsLitePlugin extends Plugin {
             registry.removeCommand(fullId);
             return;
         }
-        new Notice("Команда исчезнет из палитры после перезапуска Obsidian");
+
+        // Перерегистрация идёт на каждое сохранение, поэтому предупреждаем
+        // один раз за сеанс, а не по разу на форму.
+        if (!this.commandRemovalWarned) {
+            this.commandRemovalWarned = true;
+            new Notice("Команды обновятся в палитре после перезапуска Obsidian");
+        }
     }
 
     openCreateFormModal(): void {
