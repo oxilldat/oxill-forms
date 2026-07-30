@@ -3,8 +3,10 @@ import type {
     FieldCondition,
     FieldDefinition,
     FieldRename,
+    FormCommand,
     FormDefinition,
     InputType,
+    OutputFormat,
     PluginSettings,
 } from "./types";
 
@@ -79,12 +81,41 @@ function parseForm(raw: unknown): FormDefinition | null {
     const version = Math.max(1, Math.trunc(asNumber(raw.version, 1)));
 
     const form: FormDefinition = { name, title, version, fields };
-    if (raw.command === true) form.command = true;
+
+    const command = parseCommand(raw.command);
+    if (command) form.command = command;
 
     const renames = parseRenames(raw.renames);
     if (renames.length > 0) form.renames = renames;
 
     return form;
+}
+
+/**
+ * Раньше команда была просто `true`. Такие формы читаем как вставку в
+ * текущую заметку свойствами — именно так команда себя и вела.
+ */
+function parseCommand(raw: unknown): FormCommand | null {
+    if (raw === true) return { enabled: true, mode: "insert", format: "dataview" };
+    if (!isRecord(raw)) return null;
+
+    const command: FormCommand = {
+        enabled: raw.enabled === true,
+        mode: raw.mode === "create" ? "create" : "insert",
+        format: isOutputFormat(raw.format) ? raw.format : "dataview",
+    };
+
+    const folder = asString(raw.folder).trim();
+    if (folder !== "") command.folder = folder;
+
+    const nameField = asString(raw.nameField).trim();
+    if (nameField !== "") command.nameField = nameField;
+
+    return command;
+}
+
+function isOutputFormat(value: unknown): value is OutputFormat {
+    return value === "frontmatter" || value === "dataview" || value === "list";
 }
 
 function parseRenames(raw: unknown): FieldRename[] {

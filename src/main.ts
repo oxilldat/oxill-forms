@@ -1,10 +1,19 @@
 import { App, Notice, Plugin } from "obsidian";
 import { ModalFormsApi } from "./api";
+import { sanitizeFileName } from "./core/attachments";
 import { isDataviewAvailable } from "./core/dataview";
 import * as formsRepo from "./core/forms";
 import { applyNoteUpdates, scanNotes } from "./core/noteMigration";
 import { defaultSettings, parseSettings } from "./core/settings";
-import type { EditorContext, FormDefinition, PluginSettings } from "./core/types";
+import { createNote } from "./core/vault";
+import type { FormResult } from "./core/FormResult";
+import type {
+    EditorContext,
+    FormCommand,
+    FormDefinition,
+    OutputFormat,
+    PluginSettings,
+} from "./core/types";
 import { ModalFormsSettingTab } from "./settings/SettingsTab";
 import { FormMetaModal } from "./ui/FormMetaModal";
 
@@ -17,6 +26,17 @@ declare global {
 /** Внутренний реестр команд Obsidian — в публичных типах его нет. */
 interface CommandRegistry {
     commands?: { removeCommand?: (id: string) => void };
+}
+
+function formatResult(result: FormResult, format: OutputFormat): string {
+    switch (format) {
+        case "frontmatter":
+            return result.asFrontmatter();
+        case "dataview":
+            return result.asDataview();
+        case "list":
+            return result.asList();
+    }
 }
 
 export default class ModalFormsLitePlugin extends Plugin {
@@ -117,11 +137,16 @@ export default class ModalFormsLitePlugin extends Plugin {
         this.syncFormCommands();
     }
 
-    /** Включает или выключает команду формы в палитре. */
+    /** Быстрый переключатель команды из списка форм. */
     async setFormCommand(name: string, enabled: boolean): Promise<void> {
         const form = formsRepo.findForm(this.settings.forms, name);
         if (!form) return;
-        await this.upsertForm({ ...form, command: enabled }, name);
+
+        const command: FormCommand = form.command
+            ? { ...form.command, enabled }
+            : { enabled, mode: "insert", format: "dataview" };
+
+        await this.upsertForm({ ...form, command }, name);
     }
 
     // === Команды форм ===
@@ -133,7 +158,9 @@ export default class ModalFormsLitePlugin extends Plugin {
      */
     private syncFormCommands(): void {
         const wanted = new Set(
-            this.settings.forms.filter((form) => form.command === true).map((form) => form.name),
+            this.settings.forms
+                .filter((form) => form.command?.enabled === true)
+                .map((form) => form.name),
         );
 
         for (const name of [...this.formCommands]) {
@@ -146,21 +173,56 @@ export default class ModalFormsLitePlugin extends Plugin {
 
     private addFormCommand(name: string): void {
         const form = formsRepo.findForm(this.settings.forms, name);
-        if (!form) return;
+        const command = form?.command;
+        if (!form || !command?.enabled) return;
 
-        this.addCommand({
-            id: `fill-${name}`,
-            name: `Заполнить: ${form.title}`,
-            // editorCallback — команда видна только когда открыт редактор:
-            // результат вставляется по месту курсора, без заметки некуда.
-            editorCallback: (editor) => {
-                this.api.openForm(name).then((result) => {
-                    if (!result.ok) return;
-                    editor.replaceSelection(result.asDataview());
-                });
-            },
-        });
+        if (command.mode === "create") {
+            this.addCommand({
+                id: `fill-${name}`,
+                name: `Заполнить: ${form.title}`,
+                // Заметку создаём сами, поэтому открытый редактор не нужен.
+                callback: () => void this.createNoteFromForm(form, command),
+            });
+        } else {
+            this.addCommand({
+                id: `fill-${name}`,
+                name: `Заполнить: ${form.title}`,
+                // editorCallback — команда видна только когда открыт редактор:
+                // вставлять результат больше некуда.
+                editorCallback: (editor) => {
+                    this.api.openForm(name).then((result) => {
+                        if (!result.ok) return;
+                        editor.replaceSelection(formatResult(result, command.format));
+                    });
+                },
+            });
+        }
         this.formCommands.add(name);
+    }
+
+    /** Режим «создать заметку»: спросить форму, сложить файл, открыть его. */
+    private async createNoteFromForm(form: FormDefinition, command: FormCommand): Promise<void> {
+        const result = await this.api.openForm(form.name);
+        if (!result.ok) return;
+
+        const fromField = command.nameField
+            ? String(result.get(command.nameField, "")).trim()
+            : "";
+        const baseName = sanitizeFileName(fromField === "" ? form.title : fromField);
+
+        const body = formatResult(result, command.format);
+        const content =
+            command.format === "frontmatter"
+                ? `---\n${body}\n---\n\n# ${baseName}\n`
+                : `# ${baseName}\n\n${body}\n`;
+
+        try {
+            const file = await createNote(this.app, command.folder ?? "", baseName, content);
+            await this.app.workspace.getLeaf(false).openFile(file);
+        } catch (error) {
+            console.error("[modal-forms-lite] не удалось создать заметку", error);
+            new Notice("Не удалось создать заметку. Подробности в консоли");
+        }
     }
 
     /**
@@ -183,8 +245,8 @@ export default class ModalFormsLitePlugin extends Plugin {
     openCreateFormModal(): void {
         new FormMetaModal(this.app, {
             isNameTaken: (name) => this.isNameTaken(name),
-            onSubmit: async ({ name, title }) => {
-                await this.upsertForm({ name, title, version: 1, fields: [] });
+            onSubmit: async ({ name, title, command }) => {
+                await this.upsertForm({ name, title, version: 1, command, fields: [] });
                 new Notice(`Форма «${title}» создана`);
             },
         }).open();

@@ -1,10 +1,58 @@
-import { App, getAllTags, TFile } from "obsidian";
+import { App, getAllTags, normalizePath, TFile } from "obsidian";
 import type { SelectOption } from "./types";
 
 /**
  * Запросы к хранилищу. Вместе с attachments.ts это единственные модули в
  * core, которым нужен Obsidian — остальные обходятся без него.
  */
+
+/**
+ * Создаёт папку вместе со всеми родительскими. Obsidian бросает исключение,
+ * если папка уже есть, поэтому каждый уровень проверяем отдельно.
+ */
+export async function ensureFolder(app: App, folder: string): Promise<void> {
+    const path = normalizePath(folder);
+    if (path === "" || path === "/" || path === ".") return;
+
+    let current = "";
+    for (const part of path.split("/")) {
+        if (part === "") continue;
+        current = current === "" ? part : `${current}/${part}`;
+        if (!app.vault.getAbstractFileByPath(current)) {
+            await app.vault.createFolder(current);
+        }
+    }
+}
+
+/** Подбирает незанятый путь, добавляя «-1», «-2» к имени файла. */
+export function freePath(app: App, folder: string, base: string, extension: string): string {
+    const directory = normalizePath(folder);
+    const prefix = directory === "" || directory === "/" || directory === "." ? "" : `${directory}/`;
+    const suffix = extension === "" ? "" : `.${extension}`;
+
+    let candidate = `${prefix}${base}${suffix}`;
+    let counter = 1;
+    while (app.vault.getAbstractFileByPath(candidate)) {
+        candidate = `${prefix}${base}-${counter}${suffix}`;
+        counter++;
+    }
+    return candidate;
+}
+
+/**
+ * Создаёт заметку и возвращает её. Папка создаётся при необходимости, имя
+ * дедуплицируется — существующую заметку не перезаписываем никогда.
+ */
+export async function createNote(
+    app: App,
+    folder: string,
+    baseName: string,
+    content: string,
+): Promise<TFile> {
+    await ensureFolder(app, folder);
+    const path = freePath(app, folder, baseName, "md");
+    return app.vault.create(path, content);
+}
 
 /** Заметки указанной папки. Пустой путь означает всё хранилище. */
 export function notesIn(app: App, folder: string): TFile[] {

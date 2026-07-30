@@ -61,7 +61,7 @@ export class FormListModal extends Modal {
             .addToggle((toggle) =>
                 toggle
                     .setTooltip("Команда «Заполнить» в палитре команд")
-                    .setValue(form.command === true)
+                    .setValue(form.command?.enabled === true)
                     .onChange(async (value) => {
                         await this.plugin.setFormCommand(form.name, value);
                         this.renderList();
@@ -100,8 +100,8 @@ export class FormListModal extends Modal {
         new FormMetaModal(this.app, {
             form,
             isNameTaken: (name) => this.plugin.isNameTaken(name, form.name),
-            onSubmit: async ({ name, title }) => {
-                await this.plugin.upsertForm({ ...form, name, title }, form.name);
+            onSubmit: async ({ name, title, command }) => {
+                await this.plugin.upsertForm({ ...form, name, title, command }, form.name);
                 this.renderList();
             },
         }).open();

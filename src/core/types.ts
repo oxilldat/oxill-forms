@@ -97,6 +97,33 @@ export interface FieldRename {
     to: string;
 }
 
+/** В каком виде команда выводит результат. */
+export type OutputFormat = "frontmatter" | "dataview" | "list";
+
+export const OUTPUT_FORMAT_LABELS: Record<OutputFormat, string> = {
+    frontmatter: "YAML в шапке заметки",
+    dataview: "Свойства (ключ:: значение)",
+    list: "Маркированный список",
+};
+
+/** Что делает команда формы. */
+export type CommandMode = "insert" | "create";
+
+export const COMMAND_MODE_LABELS: Record<CommandMode, string> = {
+    insert: "Вставить в текущую заметку",
+    create: "Создать новую заметку",
+};
+
+export interface FormCommand {
+    enabled: boolean;
+    mode: CommandMode;
+    format: OutputFormat;
+    /** Режим создания: куда положить заметку. Пусто — корень хранилища. */
+    folder?: string;
+    /** Режим создания: из какого поля взять имя файла. */
+    nameField?: string;
+}
+
 export interface FormDefinition {
     /** Уникальный идентификатор формы, по нему форма открывается из кода. */
     name: string;
@@ -107,8 +134,8 @@ export interface FormDefinition {
      * которые расходятся с уже созданными заметками.
      */
     version: number;
-    /** Добавить команду «Заполнить: …» в палитру команд Obsidian. */
-    command?: boolean;
+    /** Команда «Заполнить: …» в палитре. Без неё форма открывается только из кода. */
+    command?: FormCommand;
     /** История переименований, по ней ищутся заметки под починку. */
     renames?: FieldRename[];
     fields: FieldDefinition[];
