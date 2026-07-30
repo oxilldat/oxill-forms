@@ -79,18 +79,26 @@ export class FormMetaModal extends Modal {
     }
 
     onOpen(): void {
-        const { contentEl } = this;
+        const { contentEl, modalEl } = this;
+        modalEl.addClass("mfl-meta-modal");
         contentEl.addClass("mfl-modal");
         contentEl.createEl("h3", {
             text: this.isEditing ? "Свойства формы" : "Новая форма",
             cls: "mfl-title",
         });
 
-        const main = settingsGroup(contentEl, "Основное");
+        // Длинные пояснения живут у заголовка группы: там им доступна вся
+        // ширина окна. В строке они делили бы её пополам с полем ввода и
+        // жались бы в узкую колонку.
+        const main = settingsGroup(
+            contentEl,
+            "Основное",
+            "По идентификатору форма вызывается из кода, заголовок виден в её шапке",
+        );
 
         new Setting(main)
             .setName("Идентификатор")
-            .setDesc("Уникальное имя, по которому форма вызывается из кода. Только латинские буквы")
+            .setDesc("Только латинские буквы")
             .addText((text) => {
                 this.nameInput = text;
                 text.setPlaceholder("A - z").setValue(this.name);
@@ -102,7 +110,6 @@ export class FormMetaModal extends Modal {
 
         new Setting(main)
             .setName("Заголовок")
-            .setDesc("Что видно в шапке открытой формы")
             .addText((text) =>
                 text
                     .setPlaceholder("например, Новая книга")
@@ -113,11 +120,15 @@ export class FormMetaModal extends Modal {
                     }),
             );
 
-        const look = settingsGroup(contentEl, "Вид в списке форм");
+        const look = settingsGroup(
+            contentEl,
+            "Вид в списке форм",
+            "Как форма выглядит в браузере форм. Папка — просто ярлык для группировки",
+        );
 
         new Setting(look)
             .setName("Папка")
-            .setDesc("Ярлык для группировки в списке форм. Пусто — форма без папки")
+            .setDesc("Пусто — без папки")
             .addText((text) => {
                 text.setPlaceholder("например, Чтение")
                     .setValue(this.folder)
@@ -137,7 +148,6 @@ export class FormMetaModal extends Modal {
 
         new Setting(look)
             .setName("Иконка")
-            .setDesc("Показывается на карточке формы")
             .addExtraButton((button) => {
                 this.iconPreview = button.extraSettingsEl;
                 button.setDisabled(true);
@@ -157,11 +167,14 @@ export class FormMetaModal extends Modal {
                 });
             });
 
-        const commandGroup = settingsGroup(contentEl, "Команда в палитре");
+        const commandGroup = settingsGroup(
+            contentEl,
+            "Команда в палитре",
+            "Команда «Заполнить: …» открывает эту форму из палитры Obsidian",
+        );
 
         new Setting(commandGroup)
             .setName("Добавить команду")
-            .setDesc("В палитре появится «Заполнить: …»")
             .addToggle((toggle) =>
                 toggle.setValue(this.command.enabled).onChange((value) => {
                     this.command.enabled = value;
@@ -282,7 +295,7 @@ export class FormMetaModal extends Modal {
         if (this.command.mode !== "update") {
             new Setting(container)
                 .setName("Формат результата")
-                .setDesc("Запасной вид вывода. Используется, только если шаблон заметки пуст")
+                .setDesc("Только если шаблон пуст")
                 .addDropdown((dropdown) => {
                     for (const [format, label] of Object.entries(OUTPUT_FORMAT_LABELS)) {
                         dropdown.addOption(format, label);
@@ -319,7 +332,7 @@ export class FormMetaModal extends Modal {
 
         new Setting(container)
             .setName("Имя заметки из поля")
-            .setDesc("Если поле окажется пустым, возьмём заголовок формы")
+            .setDesc("Пустое — возьмём заголовок формы")
             .addDropdown((dropdown) => {
                 dropdown.addOption("", "— заголовок формы —");
                 for (const field of named) {
