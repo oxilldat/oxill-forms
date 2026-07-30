@@ -1,6 +1,7 @@
 import { App, Modal, Setting } from "obsidian";
 import { IMAGE_ACCEPT, isAllowedImage, saveAttachment, toWikiLink } from "../core/attachments";
 import { conditionMet } from "../core/conditions";
+import { ConfirmModal } from "./ConfirmModal";
 import { FormResult } from "../core/FormResult";
 import type { FieldValue, FormData } from "../core/FormResult";
 import { noteOptions, vaultTags } from "../core/vault";
@@ -18,6 +19,8 @@ export interface FormRuntime {
      * пользовательский код не исполняется.
      */
     dataviewEnabled: boolean;
+    /** Спрашивать перед закрытием формы, в которой уже что-то заполнено. */
+    confirmDiscard: boolean;
 }
 
 /**
@@ -29,6 +32,8 @@ export class FormModal extends Modal {
     private values: FormData = {};
     private errorEl: HTMLElement | null = null;
     private answered = false;
+    /** Слепок значений на старте — по нему видно, начал ли пользователь заполнять. */
+    private snapshot = "";
     /** Строки полей с условием — их приходится показывать и скрывать на ходу. */
     private conditionalRows: { field: FieldDefinition; el: HTMLElement }[] = [];
 
@@ -52,6 +57,10 @@ export class FormModal extends Modal {
             if (field.input.type === "toggle") this.values[field.name] = false;
             if (field.input.type === "slider") this.values[field.name] = field.input.min;
         }
+
+        // Снимаем после заполнения начальных значений: предзаполненное и
+        // значения переключателей — не ввод пользователя.
+        this.snapshot = JSON.stringify(this.values);
     }
 
     onOpen(): void {
@@ -378,8 +387,9 @@ export class FormModal extends Modal {
         return false;
     }
 
+    /** Кнопка «Отмена» идёт тем же путём, что крестик: через подтверждение. */
     private cancel(): void {
-        this.answer(new FormResult({}, "cancelled"));
+        this.close();
     }
 
     private answer(result: FormResult): void {
@@ -388,13 +398,40 @@ export class FormModal extends Modal {
         this.close();
     }
 
-    /** Крестик, Escape и клик мимо окна приходят сюда, минуя кнопки. */
+    /** Начал ли пользователь заполнять форму. */
+    private isDirty(): boolean {
+        return JSON.stringify(this.values) !== this.snapshot;
+    }
+
+    /**
+     * Сюда приходят крестик, Escape, клик мимо окна и кнопка «Отмена».
+     * Если в форме уже что-то заполнено — сначала спрашиваем: данные никуда
+     * не сохранены, и закрытие их потеряет.
+     */
     close(): void {
-        if (!this.answered) {
-            this.answered = true;
-            this.resolve(new FormResult({}, "cancelled"));
+        if (this.answered) {
+            super.close();
+            return;
         }
-        super.close();
+
+        if (!this.runtime.confirmDiscard || !this.isDirty()) {
+            this.answer(new FormResult({}, "cancelled"));
+            return;
+        }
+
+        new ConfirmModal(this.app, {
+            title: "Закрыть форму?",
+            message:
+                "Форма заполнена, но не отправлена. Введённые данные будут потеряны — " +
+                "вернитесь и нажмите «Отправить», чтобы их сохранить.",
+            icon: "alert-triangle",
+            danger: true,
+            confirmText: "Закрыть без отправки",
+            cancelText: "Вернуться к заполнению",
+            // answer() выставит признак ответа, и повторный close() уже
+            // пройдёт насквозь, не спрашивая второй раз.
+            onConfirm: () => this.answer(new FormResult({}, "cancelled")),
+        }).open();
     }
 
     onClose(): void {

@@ -62,6 +62,7 @@ export class ModalFormsApi {
                     fileFolder: settings.fileFolder,
                     dataviewEnabled:
                         settings.dataviewEnabled && isDataviewAvailable(this.app),
+                    confirmDiscard: !settings.skipDiscardConfirm,
                 },
                 resolve,
                 options.values ?? {},
