@@ -36,6 +36,8 @@ export class FormModal extends Modal {
     private snapshot = "";
     /** Строки полей с условием — их приходится показывать и скрывать на ходу. */
     private conditionalRows: { field: FieldDefinition; el: HTMLElement }[] = [];
+    /** Вложения, записанные за этот сеанс. При отмене отправляются в корзину. */
+    private createdAttachments: string[] = [];
 
     constructor(
         app: App,
@@ -95,8 +97,52 @@ export class FormModal extends Modal {
             if (event.key === "Enter" && !event.isComposing && (withModifier || !inTextarea)) {
                 event.preventDefault();
                 this.submit();
+                return;
+            }
+
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                if (!this.arrowsCanNavigate(event.target)) return;
+                event.preventDefault();
+                this.moveFocus(event.key === "ArrowDown" ? 1 : -1);
             }
         });
+
+        // Курсор сразу в первом поле — иначе до него надо тянуться мышью.
+        window.setTimeout(() => this.focusables()[0]?.focus(), 0);
+    }
+
+    /** Поля формы в том порядке, в каком они видны на экране. */
+    private focusables(): HTMLElement[] {
+        return Array.from(
+            this.contentEl.querySelectorAll<HTMLElement>("input, textarea, select"),
+        ).filter((el) => el.offsetParent !== null && !el.hasAttribute("disabled"));
+    }
+
+    private moveFocus(delta: number): void {
+        const items = this.focusables();
+        const current = items.indexOf(document.activeElement as HTMLElement);
+        if (current === -1) {
+            items[0]?.focus();
+            return;
+        }
+        items[current + delta]?.focus();
+    }
+
+    /**
+     * Стрелки перебрасывают между полями только там, где у них нет своей
+     * работы. В многострочном тексте они двигают курсор, в списке меняют
+     * значение, в числе и ползунке прибавляют и убавляют — туда не лезем.
+     */
+    private arrowsCanNavigate(target: EventTarget | null): boolean {
+        // Открытая подсказка сама обрабатывает стрелки для выбора варианта.
+        if (document.querySelector(".suggestion-container") !== null) return false;
+
+        if (target instanceof HTMLTextAreaElement) return false;
+        if (target instanceof HTMLSelectElement) return false;
+        if (target instanceof HTMLInputElement) {
+            return target.type !== "range" && target.type !== "number";
+        }
+        return true;
     }
 
     private renderField(container: HTMLElement, field: FieldDefinition): void {
@@ -107,17 +153,19 @@ export class FormModal extends Modal {
 
         const preset = this.values[field.name];
         const input = field.input;
+        const hint = field.placeholder?.trim() ?? "";
 
         switch (input.type) {
             case "text":
             case "textarea":
-                this.renderTextLike(setting, field, input.type === "textarea", preset);
+                this.renderTextLike(setting, field, input.type === "textarea", preset, hint);
                 break;
 
             case "email":
             case "tel":
                 setting.addText((text) => {
                     text.inputEl.type = input.type;
+                    if (hint !== "") text.setPlaceholder(hint);
                     if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
                 });
@@ -126,6 +174,7 @@ export class FormModal extends Modal {
             case "number":
                 setting.addText((text) => {
                     text.inputEl.type = "number";
+                    if (hint !== "") text.setPlaceholder(hint);
                     if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => {
                         // Пустая строка — это «не заполнено», а не ноль.
@@ -218,6 +267,7 @@ export class FormModal extends Modal {
 
             case "note":
                 setting.addText((text) => {
+                    if (hint !== "") text.setPlaceholder(hint);
                     if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
                     new NoteSuggest(this.app, text.inputEl, input.folder, (basename) =>
@@ -228,6 +278,7 @@ export class FormModal extends Modal {
 
             case "folder":
                 setting.addText((text) => {
+                    if (hint !== "") text.setPlaceholder(hint);
                     if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
                     new FolderSuggest(this.app, text.inputEl, (path) =>
@@ -248,16 +299,19 @@ export class FormModal extends Modal {
         field: FieldDefinition,
         multiline: boolean,
         preset: FieldValue | undefined,
+        hint: string,
     ): void {
         if (multiline) {
             setting.setClass("mfl-textarea");
             setting.addTextArea((area) => {
+                if (hint !== "") area.setPlaceholder(hint);
                 if (preset !== undefined) area.setValue(String(preset));
                 area.onChange((value) => this.setValue(field.name, value));
             });
             return;
         }
         setting.addText((text) => {
+            if (hint !== "") text.setPlaceholder(hint);
             if (preset !== undefined) text.setValue(String(preset));
             text.onChange((value) => this.setValue(field.name, value));
         });
@@ -318,6 +372,7 @@ export class FormModal extends Modal {
             try {
                 const folder = isImage ? this.runtime.imageFolder : this.runtime.fileFolder;
                 const path = await saveAttachment(this.app, file, folder);
+                this.createdAttachments.push(path);
                 this.setValue(field.name, toWikiLink(path));
                 info.setText(path);
             } catch (error) {
@@ -394,8 +449,29 @@ export class FormModal extends Modal {
 
     private answer(result: FormResult): void {
         this.answered = true;
+        // Форму закрыли — значит на загруженные файлы уже никто не сошлётся.
+        if (!result.ok) void this.discardAttachments();
         this.resolve(result);
         this.close();
+    }
+
+    /**
+     * Убирает вложения, записанные за отменённый сеанс. Отправляем в корзину,
+     * а не стираем: если правило вдруг ошибётся, файл можно достать обратно.
+     */
+    private async discardAttachments(): Promise<void> {
+        const paths = this.createdAttachments;
+        this.createdAttachments = [];
+
+        for (const path of paths) {
+            const file = this.app.vault.getAbstractFileByPath(path);
+            if (!file) continue;
+            try {
+                await this.app.fileManager.trashFile(file);
+            } catch (error) {
+                console.error("[modal-forms-lite] не удалось убрать вложение", path, error);
+            }
+        }
     }
 
     /** Начал ли пользователь заполнять форму. */

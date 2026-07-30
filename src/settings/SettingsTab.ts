@@ -1,6 +1,8 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { isDataviewAvailable } from "../core/dataview";
+import { bundleToJson } from "../core/exchange";
 import { freeName } from "../core/forms";
+import { createNote } from "../core/vault";
 import { applyNoteUpdates, scanNotes } from "../core/noteMigration";
 import type { NoteUpdate } from "../core/noteMigration";
 import type ModalFormsLitePlugin from "../main";
@@ -41,6 +43,8 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                     .setCta()
                     .onClick(() => this.plugin.openCreateFormModal()),
             );
+
+        this.renderExportSetting();
 
         new Setting(containerEl).setName("Вложения").setHeading();
 
@@ -156,17 +160,62 @@ export class ModalFormsSettingTab extends PluginSettingTab {
 
     private importForm(): void {
         new ImportFormModal(this.app, {
+            pluginVersion: this.plugin.manifest.version,
             isNameTaken: (name) => this.plugin.isNameTaken(name),
             freeName: (base) => freeName(this.plugin.settings.forms, base),
-            onImport: async (form, renamedFrom) => {
-                await this.plugin.upsertForm(form);
-                if (renamedFrom !== undefined) {
-                    new Notice(`Имя «${renamedFrom}» занято, форма добавлена как «${form.name}»`);
-                } else {
-                    new Notice(`Форма «${form.title}» импортирована`);
+            onImport: async (forms, renamed) => {
+                for (const form of forms) await this.plugin.upsertForm(form);
+
+                new Notice(`Импортировано форм: ${forms.length}`);
+                if (renamed.length > 0) {
+                    new Notice(`Занятые имена переименованы: ${renamed.join(", ")}`);
                 }
             },
         }).open();
+    }
+
+    /** Экспорт всех форм разом: перенос в другое хранилище одним движением. */
+    private renderExportSetting(): void {
+        const forms = this.plugin.settings.forms;
+
+        const setting = new Setting(this.containerEl)
+            .setName("Экспорт всех форм")
+            .setDesc(`В конверт попадут все формы (${forms.length}) и версия плагина`);
+
+        if (forms.length === 0) {
+            setting.setDesc("Экспортировать пока нечего — форм нет");
+            return;
+        }
+
+        setting.addButton((button) =>
+            button.setButtonText("В буфер").onClick(async () => {
+                try {
+                    await navigator.clipboard.writeText(
+                        bundleToJson(forms, this.plugin.manifest.version),
+                    );
+                    new Notice(`Скопировано форм: ${forms.length}`);
+                } catch (error) {
+                    console.error("[modal-forms-lite] не удалось скопировать формы", error);
+                    new Notice("Не удалось обратиться к буферу обмена");
+                }
+            }),
+        );
+
+        setting.addButton((button) =>
+            button.setButtonText("В заметку").onClick(async () => {
+                const json = bundleToJson(forms, this.plugin.manifest.version);
+                const stamp = new Date().toISOString().slice(0, 10);
+                const content = `# Формы Modal Forms Lite\n\nЭкспорт от ${stamp}.\n\n\`\`\`json\n${json}\n\`\`\`\n`;
+
+                try {
+                    const file = await createNote(this.app, "", `Формы ${stamp}`, content);
+                    await this.app.workspace.getLeaf(false).openFile(file);
+                } catch (error) {
+                    console.error("[modal-forms-lite] не удалось создать заметку", error);
+                    new Notice("Не удалось создать заметку с экспортом");
+                }
+            }),
+        );
     }
 
     /**

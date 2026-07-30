@@ -90,6 +90,18 @@ export class FieldEditorModal extends Modal {
                 }),
         );
 
+        new Setting(contentEl)
+            .setName("Подсказка в поле")
+            .setDesc("Серый текст внутри пустого поля")
+            .addText((text) =>
+                text
+                    .setPlaceholder("например, фамилия и имя")
+                    .setValue(this.draft.placeholder ?? "")
+                    .onChange((value) => {
+                        this.draft.placeholder = value;
+                    }),
+            );
+
         new Setting(contentEl).setName("Обязательное").addToggle((toggle) =>
             toggle.setValue(this.draft.required === true).onChange((value) => {
                 this.draft.required = value;

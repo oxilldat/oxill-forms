@@ -1,6 +1,7 @@
-import { App } from "obsidian";
+import { App, TFile } from "obsidian";
 import { isDataviewAvailable } from "./core/dataview";
 import { findForm } from "./core/forms";
+import { valuesFromFrontmatter } from "./core/prefill";
 import { FormResult } from "./core/FormResult";
 import type { FormData } from "./core/FormResult";
 import type { FormDefinition, PluginSettings } from "./core/types";
@@ -9,6 +10,12 @@ import { FormModal } from "./ui/FormModal";
 export interface OpenFormOptions {
     /** Значения, которыми поля заполняются заранее. */
     values?: Partial<FormData>;
+    /**
+     * Подставить значения из шапки заметки: `true` — из открытой сейчас,
+     * строка — из заметки по этому пути. То, что передано в `values`,
+     * важнее — оно перекрывает взятое из заметки.
+     */
+    fromNote?: boolean | string;
 }
 
 /**
@@ -53,6 +60,11 @@ export class ModalFormsApi {
         }
 
         const settings = this.getSettings();
+        const initial = {
+            ...this.valuesFromNote(definition, options.fromNote),
+            ...(options.values ?? {}),
+        };
+
         return new Promise((resolve) => {
             new FormModal(
                 this.app,
@@ -65,8 +77,27 @@ export class ModalFormsApi {
                     confirmDiscard: !settings.skipDiscardConfirm,
                 },
                 resolve,
-                options.values ?? {},
+                initial,
             ).open();
         });
+    }
+
+    /** Значения из шапки заметки для полей с совпадающими именами. */
+    private valuesFromNote(
+        form: FormDefinition,
+        fromNote: boolean | string | undefined,
+    ): Partial<FormData> {
+        if (fromNote === undefined || fromNote === false) return {};
+
+        const file =
+            typeof fromNote === "string"
+                ? this.app.vault.getAbstractFileByPath(fromNote)
+                : this.app.workspace.getActiveFile();
+
+        if (!(file instanceof TFile)) return {};
+        return valuesFromFrontmatter(
+            form.fields,
+            this.app.metadataCache.getFileCache(file)?.frontmatter,
+        );
     }
 }

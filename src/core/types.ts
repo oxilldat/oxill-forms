@@ -75,6 +75,8 @@ export interface FieldDefinition {
     /** Подпись в интерфейсе. Если пустая — показываем name. */
     label?: string;
     description?: string;
+    /** Серый текст внутри пустого поля: подсказка, чего от пользователя ждут. */
+    placeholder?: string;
     required?: boolean;
     /**
      * Служебное поле: в форме не рисуется, но значение можно передать через

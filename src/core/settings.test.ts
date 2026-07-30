@@ -8,12 +8,17 @@ test("мусор вместо настроек даёт значения по у
     assert.deepEqual(parseSettings({}), defaultSettings());
 });
 
-test("по умолчанию подтверждение включено, Dataview выключен", () => {
+test("по умолчанию всё, что трогает чужое, выключено", () => {
     const settings = defaultSettings();
-    assert.equal(settings.skipDiscardConfirm, false);
-    assert.equal(settings.dataviewEnabled, false);
-    assert.equal(settings.autoUpdateNotes, true);
+    assert.equal(settings.skipDiscardConfirm, false, "подтверждение спрашивается");
+    assert.equal(settings.dataviewEnabled, false, "чужой код не исполняется");
+    assert.equal(settings.autoUpdateNotes, false, "чужие заметки сами не правятся");
     assert.equal(settings.imageFolder, "");
+});
+
+test("автоправка заметок включается только явным true", () => {
+    assert.equal(parseSettings({ forms: [] }).autoUpdateNotes, false);
+    assert.equal(parseSettings({ forms: [], autoUpdateNotes: true }).autoUpdateNotes, true);
 });
 
 test("форма без версии читается как первая", () => {

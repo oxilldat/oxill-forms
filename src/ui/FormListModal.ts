@@ -1,4 +1,5 @@
 import { App, Modal, Notice, Setting } from "obsidian";
+import { bundleToJson } from "../core/exchange";
 import { plural } from "../core/forms";
 import { isValidName } from "../core/naming";
 import type { FormDefinition } from "../core/types";
@@ -102,10 +103,12 @@ export class FormListModal extends Modal {
             );
     }
 
-    /** Экспорт одной формы: удобочитаемый JSON в буфер обмена. */
+    /** Экспорт одной формы: конверт с версией плагина в буфер обмена. */
     private async exportForm(form: FormDefinition): Promise<void> {
         try {
-            await navigator.clipboard.writeText(JSON.stringify(form, null, 2));
+            await navigator.clipboard.writeText(
+                bundleToJson([form], this.plugin.manifest.version),
+            );
             new Notice(`Форма «${form.title}» скопирована в буфер обмена`);
         } catch (error) {
             console.error("[modal-forms-lite] не удалось скопировать форму", error);

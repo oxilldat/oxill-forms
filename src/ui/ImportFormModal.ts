@@ -1,13 +1,16 @@
 import { App, Modal, Setting } from "obsidian";
-import { formCodeFields, parseFormDefinition } from "../core/settings";
+import { isNewerVersion, parseBundle } from "../core/exchange";
+import { formCodeFields } from "../core/settings";
 import type { FormDefinition } from "../core/types";
 
 interface ImportFormOptions {
+    /** Версия установленного плагина — сравнивается с версией из конверта. */
+    pluginVersion: string;
     /** Занято ли имя. Занятое имя не ошибка — форма приедет переименованной. */
     isNameTaken: (name: string) => boolean;
     /** Подбирает свободное имя, если предложенное занято. */
     freeName: (base: string) => string;
-    onImport: (form: FormDefinition, renamedFrom?: string) => void;
+    onImport: (forms: FormDefinition[], renamed: string[]) => void;
 }
 
 /**
@@ -38,7 +41,7 @@ export class ImportFormModal extends Modal {
         new Setting(contentEl)
             .setClass("mfl-textarea")
             .setName("JSON формы")
-            .setDesc("Вставьте то, что скопировали кнопкой экспорта")
+            .setDesc("Вставьте то, что скопировали кнопкой экспорта. Можно сразу несколько форм")
             .addTextArea((area) => {
                 area.inputEl.rows = 12;
                 area.setPlaceholder('{ "name": "book", "title": "Книга", ... }').onChange(
@@ -86,27 +89,47 @@ export class ImportFormModal extends Modal {
             return this.fail(`Это не похоже на JSON: ${reason}`);
         }
 
-        const form = parseFormDefinition(raw);
-        if (!form) {
+        const bundle = parseBundle(raw);
+        if (!bundle) {
             return this.fail("В JSON нет формы: нужны как минимум name, title и fields");
         }
 
-        // Второе нажатие после показа кода означает согласие.
-        const code = formCodeFields(form);
-        if (code.length > 0 && !this.acknowledged) {
+        // Второе нажатие после показа кода и предупреждений означает согласие.
+        const code = bundle.forms.flatMap(formCodeFields);
+        const fromNewer =
+            bundle.version !== undefined &&
+            isNewerVersion(bundle.version, this.options.pluginVersion);
+
+        if ((code.length > 0 || fromNewer) && !this.acknowledged) {
             this.acknowledged = true;
-            this.showCodeWarning(code);
+            if (fromNewer && bundle.version) this.showVersionWarning(bundle.version);
+            if (code.length > 0) this.showCodeWarning(code);
             return;
         }
 
-        const taken = this.options.isNameTaken(form.name);
-        const finalName = taken ? this.options.freeName(form.name) : form.name;
+        // Имена подбираем по очереди: две импортируемые формы могут спорить
+        // не только с существующими, но и между собой.
+        const taken = new Set<string>();
+        const renamed: string[] = [];
+        const forms = bundle.forms.map((form) => {
+            const busy = this.options.isNameTaken(form.name) || taken.has(form.name);
+            const name = busy ? this.options.freeName(form.name) : form.name;
+            if (busy) renamed.push(form.name);
+            taken.add(name);
+            return { ...form, name };
+        });
 
         this.close();
-        this.options.onImport(
-            { ...form, name: finalName },
-            taken ? form.name : undefined,
-        );
+        this.options.onImport(forms, renamed);
+    }
+
+    private showVersionWarning(version: string): void {
+        this.warningEl?.createDiv({
+            cls: "mfl-warning",
+            text:
+                `Экспорт сделан в версии плагина ${version}, у вас ${this.options.pluginVersion}. ` +
+                "Незнакомые настройки будут отброшены при чтении. Нажмите ещё раз, если согласны.",
+        });
     }
 
     private showCodeWarning(code: { field: string; query: string }[]): void {

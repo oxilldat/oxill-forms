@@ -19,7 +19,9 @@ export function defaultSettings(): PluginSettings {
         fileFolder: "",
         skipDiscardConfirm: false,
         dataviewEnabled: false,
-        autoUpdateNotes: true,
+        // Правка чужих заметок — единственное, что плагин меняет за пределами
+        // своих данных. Такое должно происходить по явной команде, а не само.
+        autoUpdateNotes: false,
     };
 }
 
@@ -58,7 +60,7 @@ export function parseSettings(raw: unknown): PluginSettings {
         fileFolder: asString(raw.fileFolder, defaults.fileFolder),
         skipDiscardConfirm: raw.skipDiscardConfirm === true,
         dataviewEnabled: raw.dataviewEnabled === true,
-        autoUpdateNotes: raw.autoUpdateNotes !== false,
+        autoUpdateNotes: raw.autoUpdateNotes === true,
     };
 }
 
@@ -157,6 +159,7 @@ function parseField(raw: unknown): FieldDefinition | null {
     const field: FieldDefinition = { name, input };
     if (typeof raw.label === "string") field.label = raw.label;
     if (typeof raw.description === "string") field.description = raw.description;
+    if (typeof raw.placeholder === "string") field.placeholder = raw.placeholder;
     if (raw.required === true) field.required = true;
     if (raw.hidden === true) field.hidden = true;
 

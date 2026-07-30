@@ -190,7 +190,9 @@ export default class ModalFormsLitePlugin extends Plugin {
                 // editorCallback — команда видна только когда открыт редактор:
                 // вставлять результат больше некуда.
                 editorCallback: (editor) => {
-                    this.api.openForm(name).then((result) => {
+                    // Курсор стоит в заметке — значит её шапка и есть то, что
+                    // пользователь собирается дополнить или поправить.
+                    this.api.openForm(name, { fromNote: true }).then((result) => {
                         if (!result.ok) return;
                         editor.replaceSelection(formatResult(result, command.format));
                     });
