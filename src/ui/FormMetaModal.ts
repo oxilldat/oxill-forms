@@ -183,16 +183,16 @@ export class FormMetaModal extends Modal {
 
         this.renderFieldHints(templateGroup);
 
-        new Setting(templateGroup).setClass("mfl-textarea").addTextArea((area) => {
-            area.inputEl.rows = 10;
-            area.inputEl.addClass("mfl-template-input");
-            this.templateInput = area.inputEl;
-            area.setPlaceholder("---\n{{frontmatter}}\n---\n\n# {{ title }}\n")
-                .setValue(this.template)
-                .onChange((value) => {
-                    this.template = value;
-                });
+        // Не Setting: у строки настроек левая половина отведена под подпись,
+        // а подписи здесь нет — поле ютилось бы справа при пустом левом столбце.
+        const area = templateGroup.createEl("textarea", { cls: "mfl-template-input" });
+        area.rows = 10;
+        area.placeholder = "---\n{{frontmatter}}\n---\n\n# {{ title }}\n";
+        area.value = this.template;
+        area.addEventListener("input", () => {
+            this.template = area.value;
         });
+        this.templateInput = area;
 
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 

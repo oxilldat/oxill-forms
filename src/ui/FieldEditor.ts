@@ -1,11 +1,11 @@
-import { App, Modal, Setting } from "obsidian";
+import { App, Setting } from "obsidian";
 import {
     CONDITION_LABELS,
     conditionNeedsValue,
     conditionsFor,
 } from "../core/conditions";
 import { isDataviewAvailable } from "../core/dataview";
-import { defaultInputFor, validateField, withSource } from "../core/fields";
+import { defaultInputFor, withSource } from "../core/fields";
 import { INPUT_TYPE_LABELS } from "../core/types";
 import type {
     ConditionKind,
@@ -14,7 +14,6 @@ import type {
     InputTypeName,
     SelectOption,
 } from "../core/types";
-import { ConfirmModal } from "./ConfirmModal";
 import { FolderSuggest } from "./FolderSuggest";
 import { restrictToLatin } from "./restrictToLatin";
 import { settingsGroup } from "./settingsGroup";
@@ -24,46 +23,30 @@ interface FieldEditorOptions {
     /** Остальные поля формы — по ним проверяется уникальность идентификатора. */
     otherFields: FieldDefinition[];
     context: EditorContext;
-    isNew?: boolean;
-    /**
-     * `previousName` приходит, только если идентификатор поменяли у уже
-     * существующего поля: по нему форма поймёт, что заметки надо починить.
-     */
-    onSubmit: (field: FieldDefinition, previousName?: string) => void;
+    /** Дёргается на любую правку: владелец обновляет заголовок строки и гасит ошибку. */
+    onChange: () => void;
 }
 
 /**
- * Окно создания и правки одного поля. Работает с копией: пока не нажата
- * кнопка сохранения, форма-владелец о правках не знает.
+ * Настройки одного поля. Не окно: рисуется прямо внутри развёрнутой строки
+ * списка полей и правит поле на месте. Отдельного сохранения нет — за него
+ * отвечает кнопка «Сохранить» у самой формы.
  */
-export class FieldEditorModal extends Modal {
-    private draft: FieldDefinition;
-    /** Слепок при открытии — по нему понимаем, были ли правки. */
-    private readonly snapshot: string;
-    private mayClose = false;
+export class FieldEditor {
+    private readonly field: FieldDefinition;
     private bodyEl: HTMLElement | null = null;
     private optionsEl: HTMLElement | null = null;
     private conditionEl: HTMLElement | null = null;
-    private errorEl: HTMLElement | null = null;
 
     constructor(
-        app: App,
+        private app: App,
         private options: FieldEditorOptions,
     ) {
-        super(app);
-        this.draft = structuredClone(options.field);
-        this.snapshot = JSON.stringify(this.draft);
+        this.field = options.field;
     }
 
-    onOpen(): void {
-        const { contentEl } = this;
-        contentEl.addClass("mfl-modal");
-        contentEl.createEl("h3", {
-            text: this.options.isNew ? "Новое поле" : "Настройка поля",
-            cls: "mfl-title",
-        });
-
-        new Setting(contentEl).setName("Тип").addDropdown((dropdown) => {
+    render(container: HTMLElement): void {
+        new Setting(container).setName("Тип").addDropdown((dropdown) => {
             for (const [type, label] of Object.entries(INPUT_TYPE_LABELS)) {
                 // Dataview прячем, пока он не включён в настройках. Поле, уже
                 // имеющее этот тип, оставляем — иначе список показал бы не то,
@@ -71,13 +54,13 @@ export class FieldEditorModal extends Modal {
                 const hidden =
                     type === "dataview" &&
                     !this.options.context.allowDataview &&
-                    this.draft.input.type !== "dataview";
+                    this.field.input.type !== "dataview";
                 if (hidden) continue;
                 dropdown.addOption(type, label);
             }
-            dropdown.setValue(this.draft.input.type).onChange((value) => {
+            dropdown.setValue(this.field.input.type).onChange((value) => {
                 // Настройки старого типа несовместимы с новым — сбрасываем.
-                this.draft.input = defaultInputFor(value as InputTypeName);
+                this.field.input = defaultInputFor(value as InputTypeName);
                 this.clearError();
                 // Раздел и обычное поле настраиваются по-разному, поэтому
                 // при смене типа перерисовываем всё, а не только настройки.
@@ -85,19 +68,8 @@ export class FieldEditorModal extends Modal {
             });
         });
 
-        this.bodyEl = contentEl.createDiv();
+        this.bodyEl = container.createDiv();
         this.renderBody();
-
-        this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
-
-        new Setting(contentEl)
-            .addButton((button) => button.setButtonText("Отмена").onClick(() => this.close()))
-            .addButton((button) =>
-                button
-                    .setButtonText(this.options.isNew ? "Добавить" : "Сохранить")
-                    .setCta()
-                    .onClick(() => this.submit()),
-            );
     }
 
     /** Настройки, специфичные для выбранного типа. */
@@ -106,7 +78,7 @@ export class FieldEditorModal extends Modal {
         if (!container) return;
         container.empty();
 
-        const input = this.draft.input;
+        const input = this.field.input;
 
         if (input.type === "note") {
             this.renderFolderPicker(container, "Папка с заметками", input.folder, (path) => {
@@ -175,7 +147,7 @@ export class FieldEditorModal extends Modal {
                 dropdown.addOption("fixed", "Заданный список");
                 dropdown.addOption("notes", "Заметки из папки");
                 dropdown.setValue(input.source).onChange((value) => {
-                    this.draft.input = withSource(kind, value === "notes" ? "notes" : "fixed");
+                    this.field.input = withSource(kind, value === "notes" ? "notes" : "fixed");
                     this.renderInputOptions();
                     this.clearError();
                 });
@@ -204,7 +176,7 @@ export class FieldEditorModal extends Modal {
 
     /** Типы, у которых есть собственные настройки под выпадающим списком. */
     private hasTypeOptions(): boolean {
-        const type = this.draft.input.type;
+        const type = this.field.input.type;
         return (
             type === "select" ||
             type === "multiselect" ||
@@ -226,7 +198,7 @@ export class FieldEditorModal extends Modal {
         if (!container) return;
         container.empty();
 
-        const isSection = this.draft.input.type === "section";
+        const isSection = this.field.input.type === "section";
         const main = settingsGroup(container, "Основное");
 
         if (!isSection) {
@@ -234,9 +206,9 @@ export class FieldEditorModal extends Modal {
                 .setName("Идентификатор")
                 .setDesc("Ключ в результате формы. Только латинские буквы")
                 .addText((text) => {
-                    text.setPlaceholder("A - z").setValue(this.draft.name);
+                    text.setPlaceholder("A - z").setValue(this.field.name);
                     restrictToLatin(text.inputEl, (value) => {
-                        this.draft.name = value;
+                        this.field.name = value;
                         this.clearError();
                     });
                 });
@@ -247,18 +219,18 @@ export class FieldEditorModal extends Modal {
             .addText((text) =>
                 text
                     .setPlaceholder(isSection ? "например, Оценка" : "Что видит пользователь")
-                    .setValue(this.draft.label ?? "")
+                    .setValue(this.field.label ?? "")
                     .onChange((value) => {
-                        this.draft.label = value;
+                        this.field.label = value;
                     }),
             );
 
         new Setting(main).setName("Описание").addText((text) =>
             text
                 .setPlaceholder("Пояснение под подписью")
-                .setValue(this.draft.description ?? "")
+                .setValue(this.field.description ?? "")
                 .onChange((value) => {
-                    this.draft.description = value;
+                    this.field.description = value;
                 }),
         );
 
@@ -269,9 +241,9 @@ export class FieldEditorModal extends Modal {
                 .addText((text) =>
                     text
                         .setPlaceholder("например, фамилия и имя")
-                        .setValue(this.draft.placeholder ?? "")
+                        .setValue(this.field.placeholder ?? "")
                         .onChange((value) => {
-                            this.draft.placeholder = value;
+                            this.field.placeholder = value;
                         }),
                 );
 
@@ -283,17 +255,17 @@ export class FieldEditorModal extends Modal {
                 .addText((text) =>
                     text
                         .setPlaceholder("например, {{today}}")
-                        .setValue(this.draft.default ?? "")
+                        .setValue(this.field.default ?? "")
                         .onChange((value) => {
-                            this.draft.default = value;
+                            this.field.default = value;
                         }),
                 );
 
             const behavior = settingsGroup(container, "Поведение");
 
             new Setting(behavior).setName("Обязательное").addToggle((toggle) =>
-                toggle.setValue(this.draft.required === true).onChange((value) => {
-                    this.draft.required = value;
+                toggle.setValue(this.field.required === true).onChange((value) => {
+                    this.field.required = value;
                     this.clearError();
                 }),
             );
@@ -305,8 +277,8 @@ export class FieldEditorModal extends Modal {
                         "openForm(..., { values }) и попадает в результат",
                 )
                 .addToggle((toggle) =>
-                    toggle.setValue(this.draft.hidden === true).onChange((value) => {
-                        this.draft.hidden = value;
+                    toggle.setValue(this.field.hidden === true).onChange((value) => {
+                        this.field.hidden = value;
                         this.clearError();
                         this.renderCondition();
                     }),
@@ -332,9 +304,9 @@ export class FieldEditorModal extends Modal {
         if (!host) return;
         host.empty();
 
-        if (this.draft.hidden) return;
+        if (this.field.hidden) return;
 
-        const isSection = this.draft.input.type === "section";
+        const isSection = this.field.input.type === "section";
         const what = isSection ? "раздел" : "поле";
 
         const container = settingsGroup(
@@ -354,7 +326,7 @@ export class FieldEditorModal extends Modal {
             return;
         }
 
-        const condition = this.draft.condition;
+        const condition = this.field.condition;
 
         new Setting(container)
             .setName(`Показывать ${what}`)
@@ -363,12 +335,12 @@ export class FieldEditorModal extends Modal {
                 dropdown.addOption("conditional", "При условии");
                 dropdown.setValue(condition ? "conditional" : "always").onChange((value) => {
                     if (value === "always") {
-                        delete this.draft.condition;
+                        delete this.field.condition;
                     } else {
                         const first = candidates[0];
                         if (!first) return;
                         const kinds = conditionsFor(first.input.type);
-                        this.draft.condition = {
+                        this.field.condition = {
                             field: first.name,
                             kind: kinds[0] ?? "isSet",
                         };
@@ -517,64 +489,8 @@ export class FieldEditorModal extends Modal {
         );
     }
 
+    /** Правка любого поля гасит ошибку формы и обновляет заголовок строки. */
     private clearError(): void {
-        if (this.errorEl) this.errorEl.setText("");
-    }
-
-    private submit(): void {
-        this.draft.name = this.draft.name.trim();
-
-        const input = this.draft.input;
-        if ((input.type === "select" || input.type === "multiselect") && input.source === "fixed") {
-            for (const option of input.options) {
-                option.value = option.value.trim();
-                // Пустая подпись — не ошибка: показываем само значение.
-                if (option.label.trim() === "") option.label = option.value;
-            }
-        }
-
-        const error = validateField(this.draft, this.options.otherFields);
-        if (error) {
-            if (this.errorEl) this.errorEl.setText(error);
-            return;
-        }
-
-        this.mayClose = true;
-        this.close();
-
-        const before = this.options.field.name;
-        const renamed = !this.options.isNew && before !== "" && before !== this.draft.name;
-        this.options.onSubmit(this.draft, renamed ? before : undefined);
-    }
-
-    private isDirty(): boolean {
-        return JSON.stringify(this.draft) !== this.snapshot;
-    }
-
-    /** Как и в редакторе формы: несохранённые правки не теряем молча. */
-    close(): void {
-        if (this.mayClose || !this.options.context.confirmDiscard || !this.isDirty()) {
-            super.close();
-            return;
-        }
-
-        new ConfirmModal(this.app, {
-            title: "Закрыть без сохранения?",
-            message:
-                "Настройки поля не сохранены и будут потеряны. " +
-                `Вернитесь и нажмите «${this.options.isNew ? "Добавить" : "Сохранить"}», чтобы их оставить.`,
-            icon: "alert-triangle",
-            danger: true,
-            confirmText: "Закрыть без сохранения",
-            cancelText: "Вернуться к правке",
-            onConfirm: () => {
-                this.mayClose = true;
-                this.close();
-            },
-        }).open();
-    }
-
-    onClose(): void {
-        this.contentEl.empty();
+        this.options.onChange();
     }
 }

@@ -320,11 +320,27 @@
     border-top: none;
 }
 
-/* Заголовок группы висит над карточкой, поэтому линия сверху ему не нужна. */
-.mfl-settings-group + .setting-item.setting-item-heading,
+/* Поле шаблона лежит в карточке напрямую, без строки настроек: подписи у
+   него нет, и половина ширины под неё не нужна. */
+.mfl-settings-group > .mfl-template-input {
+    display: block;
+    width: calc(100% - 2rem);
+    margin: 0.5rem 1rem 1rem;
+    resize: vertical;
+}
+
+/* Заголовок стоит над своей карточкой и должен читаться как её подпись:
+   сверху воздуха много, снизу почти нет. Иначе он висит ровно посередине
+   между двумя карточками, и непонятно, к какой относится. */
 .setting-item.setting-item-heading {
     border-top: none;
-    padding-bottom: 0.4rem;
+    padding: 1.1rem 0 0.35rem;
+    margin: 0;
+}
+
+.mfl-modal .setting-item.setting-item-heading:first-child,
+.mfl-settings-group .setting-item.setting-item-heading {
+    padding-top: 0;
 }
 
 .mfl-setting-disabled .setting-item-name {
@@ -457,6 +473,38 @@
     flex-direction: column;
     gap: 0.5rem;
     margin: 0.75rem 0;
+}
+
+/* Блок поля в редакторе состава: шапка со строкой, под ней настройки. */
+.mfl-field-block {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background-color: var(--background-secondary);
+    overflow: hidden;
+}
+
+.mfl-field-header {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.45rem 0.5rem;
+}
+
+.mfl-field-body {
+    padding: 0 0.75rem 0.5rem;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Внутри блока поля карточки групп лишние: блок сам уже карточка. */
+.mfl-field-body .mfl-settings-group {
+    background: none;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+.mfl-field-body .mfl-settings-group .setting-item {
+    padding-left: 0;
+    padding-right: 0;
 }
 
 .mfl-field-row {

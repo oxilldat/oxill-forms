@@ -3,7 +3,7 @@ import { createField, moveField, removeFieldAt, validateFields } from "../core/f
 import { INPUT_TYPE_LABELS } from "../core/types";
 import type { EditorContext, FieldDefinition, FormDefinition } from "../core/types";
 import { ConfirmModal } from "./ConfirmModal";
-import { FieldEditorModal } from "./FieldEditorModal";
+import { FieldEditor } from "./FieldEditor";
 
 interface FormEditorOptions {
     form: FormDefinition;
@@ -12,9 +12,11 @@ interface FormEditorOptions {
 }
 
 /**
- * Состав формы: список полей и порядок. Настройка отдельного поля живёт в
- * своём окне — здесь только перечень. Правки применяются к настройкам
- * плагина по кнопке «Сохранить», отмена ничего не меняет.
+ * Состав формы: список полей, порядок и настройки каждого. Настройки поля
+ * разворачиваются прямо в строке — отдельного окна нет, иначе на каждое
+ * поле приходилось бы открывать и закрывать ещё одно окно поверх двух.
+ *
+ * Правки применяются к настройкам плагина по кнопке «Сохранить».
  */
 export class FormEditorModal extends Modal {
     private draft: FormDefinition;
@@ -22,8 +24,16 @@ export class FormEditorModal extends Modal {
     /** Слепок при открытии — по нему понимаем, были ли правки. */
     private readonly snapshot: string;
     private mayClose = false;
-    /** Переименования, накопленные за этот сеанс правки. */
-    private pendingRenames: { from: string; to: string }[] = [];
+    /**
+     * Развёрнутые строки храним по ссылке на поле, а не по номеру: при
+     * перестановке номер уехал бы на соседа.
+     */
+    private expanded = new Set<FieldDefinition>();
+    /**
+     * Имя поля на момент открытия. Нужно, чтобы на сохранении понять, какие
+     * поля переименованы, и починить заметки. Новых полей в карте нет.
+     */
+    private originalNames = new WeakMap<FieldDefinition, string>();
     private fieldsEl: HTMLElement | null = null;
     private errorEl: HTMLElement | null = null;
 
@@ -35,6 +45,8 @@ export class FormEditorModal extends Modal {
         this.draft = structuredClone(options.form);
         this.originalName = options.form.name;
         this.snapshot = JSON.stringify(this.draft);
+
+        for (const field of this.draft.fields) this.originalNames.set(field, field.name);
     }
 
     onOpen(): void {
@@ -64,29 +76,11 @@ export class FormEditorModal extends Modal {
     }
 
     private addField(): void {
-        new FieldEditorModal(this.app, {
-            field: createField(this.draft.fields),
-            otherFields: this.draft.fields,
-            context: this.options.context,
-            isNew: true,
-            onSubmit: (field) => {
-                this.draft.fields.push(field);
-                this.renderFields();
-            },
-        }).open();
-    }
-
-    private editField(field: FieldDefinition, index: number): void {
-        new FieldEditorModal(this.app, {
-            field,
-            otherFields: this.draft.fields.filter((other) => other !== field),
-            context: this.options.context,
-            onSubmit: (edited, previousName) => {
-                this.draft.fields[index] = edited;
-                if (previousName !== undefined) this.recordRename(previousName, edited.name);
-                this.renderFields();
-            },
-        }).open();
+        const field = createField(this.draft.fields);
+        this.draft.fields.push(field);
+        // Новое поле сразу раскрыто: его всё равно нужно настраивать.
+        this.expanded.add(field);
+        this.renderFields();
     }
 
     private renderFields(): void {
@@ -98,26 +92,46 @@ export class FormEditorModal extends Modal {
     }
 
     private renderRow(container: HTMLElement, field: FieldDefinition, index: number): void {
-        const row = container.createDiv({ cls: "mfl-field-row" });
+        const block = container.createDiv({ cls: "mfl-field-block" });
+        const header = block.createDiv({ cls: "mfl-field-header" });
 
-        const caption = row.createDiv({ cls: "mfl-field-caption" });
+        const isOpen = this.expanded.has(field);
+        const chevron = header.createDiv({ cls: "clickable-icon" });
+        setIcon(chevron, isOpen ? "chevron-down" : "chevron-right");
+        chevron.addEventListener("click", () => {
+            if (isOpen) this.expanded.delete(field);
+            else this.expanded.add(field);
+            this.renderFields();
+        });
+
+        const caption = header.createDiv({ cls: "mfl-field-caption" });
         caption.createSpan({ text: field.label?.trim() || field.name });
         caption.createSpan({ cls: "mfl-field-type", text: INPUT_TYPE_LABELS[field.input.type] });
-        caption.addEventListener("click", () => this.editField(field, index));
+        caption.addEventListener("click", () => chevron.click());
 
-        this.iconButton(row, "arrow-up", "Выше", () => {
+        this.iconButton(header, "arrow-up", "Выше", () => {
             this.draft.fields = moveField(this.draft.fields, index, -1);
             this.renderFields();
         });
-        this.iconButton(row, "arrow-down", "Ниже", () => {
+        this.iconButton(header, "arrow-down", "Ниже", () => {
             this.draft.fields = moveField(this.draft.fields, index, 1);
             this.renderFields();
         });
-        this.iconButton(row, "pencil", "Настроить поле", () => this.editField(field, index));
-        this.iconButton(row, "trash-2", "Удалить поле", () => {
+        this.iconButton(header, "trash-2", "Удалить поле", () => {
+            this.expanded.delete(field);
             this.draft.fields = removeFieldAt(this.draft.fields, index);
             this.renderFields();
         });
+
+        if (!isOpen) return;
+
+        const body = block.createDiv({ cls: "mfl-field-body" });
+        new FieldEditor(this.app, {
+            field,
+            otherFields: this.draft.fields.filter((other) => other !== field),
+            context: this.options.context,
+            onChange: () => this.clearError(),
+        }).render(body);
     }
 
     private iconButton(
@@ -135,7 +149,42 @@ export class FormEditorModal extends Modal {
         if (this.errorEl) this.errorEl.setText("");
     }
 
+    /** Подчищает то, что пользователь мог оставить неаккуратным. */
+    private normalize(): void {
+        for (const field of this.draft.fields) {
+            field.name = field.name.trim();
+
+            const input = field.input;
+            if (input.type !== "select" && input.type !== "multiselect") continue;
+            if (input.source !== "fixed") continue;
+
+            for (const option of input.options) {
+                option.value = option.value.trim();
+                // Пустая подпись — не ошибка: показываем само значение.
+                if (option.label.trim() === "") option.label = option.value;
+            }
+        }
+    }
+
+    /**
+     * Переименования выводим сравнением с именами на момент открытия. Так
+     * перестановка и удаление полей не путают карту: она держит сами поля,
+     * а не их номера.
+     */
+    private collectRenames(): { from: string; to: string }[] {
+        const renames: { from: string; to: string }[] = [];
+        for (const field of this.draft.fields) {
+            const before = this.originalNames.get(field);
+            if (before !== undefined && before !== field.name) {
+                renames.push({ from: before, to: field.name });
+            }
+        }
+        return renames;
+    }
+
     private submit(): void {
+        this.normalize();
+
         const error = validateFields(this.draft.fields);
         if (error) {
             if (this.errorEl) this.errorEl.setText(error);
@@ -144,12 +193,13 @@ export class FormEditorModal extends Modal {
 
         // Версию поднимаем только при переименованиях: именно они расходятся
         // с уже созданными заметками. Прочие правки заметок не касаются.
-        if (this.pendingRenames.length > 0) {
+        const renames = this.collectRenames();
+        if (renames.length > 0) {
             const version = this.draft.version + 1;
             this.draft.version = version;
             this.draft.renames = [
                 ...(this.draft.renames ?? []),
-                ...this.pendingRenames.map((rename) => ({ ...rename, version })),
+                ...renames.map((rename) => ({ ...rename, version })),
             ];
         }
 
@@ -158,23 +208,8 @@ export class FormEditorModal extends Modal {
         this.options.onSave(this.draft, this.originalName);
     }
 
-    /**
-     * Копит переименования за сеанс правки. Цепочку a → b → c сворачиваем в
-     * a → c, а возврат к исходному имени убираем совсем: заметки в этих
-     * случаях чинить не нужно.
-     */
-    private recordRename(from: string, to: string): void {
-        const chained = this.pendingRenames.find((rename) => rename.to === from);
-        if (chained) {
-            chained.to = to;
-        } else {
-            this.pendingRenames.push({ from, to });
-        }
-        this.pendingRenames = this.pendingRenames.filter((rename) => rename.from !== rename.to);
-    }
-
     private isDirty(): boolean {
-        return JSON.stringify(this.draft) !== this.snapshot || this.pendingRenames.length > 0;
+        return JSON.stringify(this.draft) !== this.snapshot;
     }
 
     /**
