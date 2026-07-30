@@ -1,4 +1,4 @@
-import { App, Modal, Setting } from "obsidian";
+import { App, Modal, Notice, Setting } from "obsidian";
 import { plural } from "../core/forms";
 import { isValidName } from "../core/naming";
 import type { FormDefinition } from "../core/types";
@@ -90,10 +90,27 @@ export class FormListModal extends Modal {
             )
             .addExtraButton((button) =>
                 button
+                    .setIcon("clipboard-copy")
+                    .setTooltip("Экспорт: скопировать JSON формы")
+                    .onClick(() => void this.exportForm(form)),
+            )
+            .addExtraButton((button) =>
+                button
                     .setIcon("trash-2")
                     .setTooltip("Удалить")
                     .onClick(() => this.deleteForm(form)),
             );
+    }
+
+    /** Экспорт одной формы: удобочитаемый JSON в буфер обмена. */
+    private async exportForm(form: FormDefinition): Promise<void> {
+        try {
+            await navigator.clipboard.writeText(JSON.stringify(form, null, 2));
+            new Notice(`Форма «${form.title}» скопирована в буфер обмена`);
+        } catch (error) {
+            console.error("[modal-forms-lite] не удалось скопировать форму", error);
+            new Notice("Не удалось обратиться к буферу обмена");
+        }
     }
 
     private editMeta(form: FormDefinition): void {

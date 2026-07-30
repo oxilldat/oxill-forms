@@ -62,6 +62,23 @@ export function parseSettings(raw: unknown): PluginSettings {
     };
 }
 
+/**
+ * Разбор одной формы из чужого источника — вставленного JSON при импорте.
+ * Те же правила, что при чтении data.json: непонятное отбрасывается.
+ */
+export function parseFormDefinition(raw: unknown): FormDefinition | null {
+    return parseForm(raw);
+}
+
+/** Есть ли в форме поля, исполняющие код. Нужно предупредить при импорте. */
+export function formCodeFields(form: FormDefinition): { field: string; query: string }[] {
+    return form.fields.flatMap((field) =>
+        field.input.type === "dataview"
+            ? [{ field: field.label?.trim() || field.name, query: field.input.query }]
+            : [],
+    );
+}
+
 function parseForm(raw: unknown): FormDefinition | null {
     if (!isRecord(raw)) return null;
     const name = asString(raw.name).trim();

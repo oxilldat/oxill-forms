@@ -49,6 +49,24 @@
     min-height: 5rem;
 }
 
+/* Показ чужого кода перед импортом формы. */
+.mfl-code-label {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    padding-top: 0.5rem;
+}
+
+.mfl-code {
+    margin: 0.2rem 0 0;
+    padding: 0.5rem;
+    border-radius: var(--radius-s);
+    background-color: var(--background-secondary);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* Поле, скрытое невыполненным условием. */
 .mfl-hidden {
     display: none;

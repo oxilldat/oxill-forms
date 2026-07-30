@@ -1,10 +1,12 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { isDataviewAvailable } from "../core/dataview";
+import { freeName } from "../core/forms";
 import { applyNoteUpdates, scanNotes } from "../core/noteMigration";
 import type { NoteUpdate } from "../core/noteMigration";
 import type ModalFormsLitePlugin from "../main";
 import { FolderSuggest } from "../ui/FolderSuggest";
 import { FormListModal } from "../ui/FormListModal";
+import { ImportFormModal } from "../ui/ImportFormModal";
 
 export class ModalFormsSettingTab extends PluginSettingTab {
     /** Результат последнего сканирования: null — ещё не искали. */
@@ -29,6 +31,9 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                 button
                     .setButtonText("Список форм")
                     .onClick(() => new FormListModal(this.app, this.plugin).open()),
+            )
+            .addButton((button) =>
+                button.setButtonText("Импорт").onClick(() => this.importForm()),
             )
             .addButton((button) =>
                 button
@@ -147,6 +152,21 @@ export class ModalFormsSettingTab extends PluginSettingTab {
     /** Результат сканирования не должен переживать закрытие настроек. */
     hide(): void {
         this.found = null;
+    }
+
+    private importForm(): void {
+        new ImportFormModal(this.app, {
+            isNameTaken: (name) => this.plugin.isNameTaken(name),
+            freeName: (base) => freeName(this.plugin.settings.forms, base),
+            onImport: async (form, renamedFrom) => {
+                await this.plugin.upsertForm(form);
+                if (renamedFrom !== undefined) {
+                    new Notice(`Имя «${renamedFrom}» занято, форма добавлена как «${form.name}»`);
+                } else {
+                    new Notice(`Форма «${form.title}» импортирована`);
+                }
+            },
+        }).open();
     }
 
     /**
