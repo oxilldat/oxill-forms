@@ -28,14 +28,15 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName("Формы")
             .setDesc("Формы хранятся в настройках плагина и вызываются по идентификатору")
-            .setHeading()
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName("Браузер форм")
+            .setDesc("Список форм с папками и карточками: правка, дублирование, удаление")
             .addButton((button) =>
                 button
                     .setButtonText("Список форм")
                     .onClick(() => new FormListModal(this.app, this.plugin).open()),
-            )
-            .addButton((button) =>
-                button.setButtonText("Импорт").onClick(() => this.importForm()),
             )
             .addButton((button) =>
                 button
@@ -44,6 +45,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                     .onClick(() => this.plugin.openCreateFormModal()),
             );
 
+        this.renderImportSetting();
         this.renderExportSetting();
 
         new Setting(containerEl).setName("Вложения").setHeading();
@@ -172,6 +174,16 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                 }
             },
         }).open();
+    }
+
+    /** Импорт форм из конверта — отдельной строкой, в пару к экспорту. */
+    private renderImportSetting(): void {
+        new Setting(this.containerEl)
+            .setName("Импорт форм")
+            .setDesc("Вставить конверт форм из другого хранилища")
+            .addButton((button) =>
+                button.setButtonText("Импортировать").onClick(() => this.importForm()),
+            );
     }
 
     /** Экспорт всех форм разом: перенос в другое хранилище одним движением. */

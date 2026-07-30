@@ -6,6 +6,7 @@ import { ConfirmModal } from "./ConfirmModal";
 import { FormResult } from "../core/FormResult";
 import type { FieldValue, FormData } from "../core/FormResult";
 import { noteOptions, vaultTags } from "../core/vault";
+import { isDecorative } from "../core/types";
 import type { FieldDefinition, FormDefinition, SelectOption } from "../core/types";
 import { DataviewSuggest } from "./DataviewSuggest";
 import { FolderSuggest } from "./FolderSuggest";
@@ -562,10 +563,13 @@ export class FormModal extends Modal {
 
     /**
      * Поля, которые были на экране и остались пустыми. Скрытые условием сюда
-     * не попадают: пользователь их не видел и очистить не мог.
+     * не попадают: пользователь их не видел и очистить не мог. Разделы тоже —
+     * значения у них нет, а их служебное имя удалило бы одноимённый ключ
+     * из чужой шапки.
      */
     private collectCleared(): string[] {
         return this.form.fields
+            .filter((field) => !isDecorative(field.input.type))
             .filter((field) => !field.hidden && this.isShown(field))
             .filter((field) => this.isEmpty(this.values[field.name]))
             .map((field) => field.name);
