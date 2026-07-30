@@ -1,64 +1,5 @@
 /* Modal Forms Lite */
 
-/* === Раскладка строк в окнах ===
-
-   Компонент Setting придуман для страницы настроек: подпись длинная слева,
-   короткое управление справа. У формы наоборот — подпись короткая, а ввод
-   длинный. Поэтому в наших окнах строка разворачивается в колонку: подпись
-   сверху, поле во всю ширину. Глаз идёт одной колонкой сверху вниз, а не
-   прыгает влево-вправо, и пустая половина строки не пропадает зря. */
-
-.mfl-modal .setting-item {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.3rem;
-}
-
-.mfl-modal .setting-item-info {
-    margin-right: 0;
-}
-
-.mfl-modal .setting-item-control {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-}
-
-.mfl-modal .setting-item-control input[type="text"],
-.mfl-modal .setting-item-control input[type="number"],
-.mfl-modal .setting-item-control input[type="date"],
-.mfl-modal .setting-item-control input[type="time"],
-.mfl-modal .setting-item-control input[type="datetime-local"],
-.mfl-modal .setting-item-control input[type="email"],
-.mfl-modal .setting-item-control input[type="tel"],
-.mfl-modal .setting-item-control input[type="search"],
-.mfl-modal .setting-item-control select,
-.mfl-modal .setting-item-control textarea {
-    width: 100%;
-}
-
-/* Компактному управлению колонка не нужна: переключатель и ползунок читаются
-   в строку, а ряд кнопок без подписи и должен прижиматься вправо.
-   Строку без подписи узнаём по пустому элементу названия. */
-.mfl-modal .setting-item:has(.checkbox-container),
-.mfl-modal .setting-item:has(input[type="range"]),
-.mfl-modal .setting-item:has(.setting-item-name:empty),
-.mfl-modal .setting-item.setting-item-heading {
-    flex-direction: row;
-    align-items: center;
-    gap: 1rem;
-}
-
-.mfl-modal .setting-item:has(.checkbox-container) .setting-item-control,
-.mfl-modal .setting-item:has(input[type="range"]) .setting-item-control,
-.mfl-modal .setting-item:has(.setting-item-name:empty) .setting-item-control {
-    width: auto;
-    flex: 0 0 auto;
-    margin-left: auto;
-    justify-content: flex-end;
-}
-
 .mfl-modal .mfl-title {
     margin-top: 0;
 }
@@ -239,22 +180,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-}
-
-/* Предпросмотр иконки перед полем ввода. */
-.mfl-icon-badge {
-    display: flex;
-    align-items: center;
-    color: var(--text-muted);
-}
-
-/* Заголовок сворачиваемой группы кликабелен целиком. */
-.mfl-collapsible {
-    cursor: pointer;
-}
-
-.mfl-collapsible:hover .setting-item-name {
-    color: var(--text-normal);
 }
 
 .mfl-icon-preview {
@@ -510,7 +435,7 @@
 
 .mfl-upload .setting-item-control {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-end;
     gap: 0.35rem;
 }
 
@@ -522,7 +447,7 @@
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
     word-break: break-all;
-    text-align: left;
+    text-align: right;
 }
 
 .mfl-suggest-path {

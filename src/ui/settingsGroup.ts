@@ -1,4 +1,4 @@
-import { setIcon, Setting } from "obsidian";
+import { Setting } from "obsidian";
 
 /**
  * Группа настроек карточкой: заголовок раздела стоит снаружи, строки —
@@ -16,33 +16,4 @@ export function settingsGroup(
     const heading = new Setting(container).setName(name).setHeading();
     if (description) heading.setDesc(description);
     return container.createDiv({ cls: "mfl-settings-group" });
-}
-
-/**
- * То же, но группа сворачивается по клику на заголовок. Нужна тем разделам,
- * которые велики и нужны не всегда: свёрнутыми они не мешают читать окно.
- */
-export function collapsibleGroup(
-    container: HTMLElement,
-    name: string,
-    description: string | undefined,
-    opened: boolean,
-): HTMLElement {
-    const heading = new Setting(container).setName(name).setHeading();
-    if (description) heading.setDesc(description);
-    heading.settingEl.addClass("mfl-collapsible");
-
-    const body = container.createDiv({ cls: "mfl-settings-group" });
-    body.toggleClass("mfl-hidden", !opened);
-
-    const chevron = heading.controlEl.createDiv({ cls: "clickable-icon" });
-    setIcon(chevron, opened ? "chevron-down" : "chevron-right");
-
-    heading.settingEl.addEventListener("click", () => {
-        const willOpen = body.hasClass("mfl-hidden");
-        body.toggleClass("mfl-hidden", !willOpen);
-        setIcon(chevron, willOpen ? "chevron-down" : "chevron-right");
-    });
-
-    return body;
 }
