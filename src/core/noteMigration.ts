@@ -1,4 +1,6 @@
-import { App, TFile } from "obsidian";
+// Только типы: модуль ничего не создаёт из Obsidian, поэтому его логику
+// можно проверять тестами без запуска приложения.
+import type { App, TFile } from "obsidian";
 import type { FieldRename, FormDefinition } from "./types";
 
 /**

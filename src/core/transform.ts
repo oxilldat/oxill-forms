@@ -1,4 +1,4 @@
-import type { FieldValue } from "./FormResult";
+﻿import type { FieldValue } from "./FormResult";
 
 /**
  * Преобразования значений в шаблоне: `{{ title | upper }}`.
@@ -21,8 +21,11 @@ export function isTransformName(value: string): value is TransformName {
     return (TRANSFORMS as readonly string[]).includes(value);
 }
 
-/** Значение одной строкой: массивы склеиваем запятой. */
-function asText(value: FieldValue): string {
+/**
+ * Значение одной строкой: массивы склеиваем запятой. Именно в таком виде
+ * Dataview разбирает список в inline-свойстве.
+ */
+export function flatten(value: FieldValue): string {
     return Array.isArray(value) ? value.join(", ") : String(value);
 }
 
@@ -65,11 +68,11 @@ export function applyTransform(name: TransformName, value: FieldValue): string {
 
     switch (name) {
         case "upper":
-            return asText(value).toLocaleUpperCase();
+            return flatten(value).toLocaleUpperCase();
         case "lower":
-            return asText(value).toLocaleLowerCase();
+            return flatten(value).toLocaleLowerCase();
         case "trim":
-            return asText(value).trim();
+            return flatten(value).trim();
         case "capitalize":
             return perItem(capitalize);
         case "slug":
