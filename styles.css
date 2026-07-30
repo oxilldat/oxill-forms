@@ -49,6 +49,144 @@
     min-height: 5rem;
 }
 
+/* === Список форм: папки слева, карточки справа === */
+
+.mfl-browser {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+    min-height: 18rem;
+    max-height: 60vh;
+}
+
+.mfl-folders {
+    flex: 0 0 12rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    border-right: 1px solid var(--background-modifier-border);
+}
+
+.mfl-folder {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--radius-s);
+    cursor: pointer;
+}
+
+.mfl-folder:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.mfl-folder.is-active {
+    background-color: var(--background-modifier-active-hover);
+}
+
+.mfl-folder-icon {
+    display: flex;
+    color: var(--text-muted);
+}
+
+.mfl-folder-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mfl-folder-count {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.mfl-cards {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    min-width: 0;
+}
+
+.mfl-cards-empty {
+    color: var(--text-muted);
+    padding: 1.5rem 0;
+    text-align: center;
+}
+
+.mfl-card {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background-color: var(--background-secondary);
+    padding: 0.5rem 0.6rem;
+}
+
+.mfl-card:hover {
+    border-color: var(--background-modifier-border-hover);
+}
+
+.mfl-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.mfl-card-icon {
+    display: flex;
+    padding-top: 0.15rem;
+    color: var(--text-accent);
+}
+
+.mfl-card-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.mfl-card-title {
+    font-weight: var(--font-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mfl-card-meta {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.mfl-card-marks {
+    display: flex;
+    gap: 0.25rem;
+    color: var(--text-muted);
+}
+
+.mfl-card-marks .svg-icon {
+    width: 0.9em;
+    height: 0.9em;
+}
+
+.mfl-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.1rem;
+    padding-top: 0.25rem;
+}
+
+.mfl-icon-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mfl-icon-preview {
+    display: flex;
+    color: var(--text-muted);
+}
+
 /* Подстановки, доступные в шаблоне: вставляются кликом. */
 .mfl-hints {
     display: flex;

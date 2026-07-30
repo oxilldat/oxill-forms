@@ -3,6 +3,7 @@ import { ModalFormsApi } from "./api";
 import { sanitizeFileName } from "./core/attachments";
 import { renderNote } from "./core/format";
 import { isDataviewAvailable } from "./core/dataview";
+import { folderNames } from "./core/formFolders";
 import * as formsRepo from "./core/forms";
 import { applyNoteUpdates, scanNotes } from "./core/noteMigration";
 import { defaultSettings, parseSettings } from "./core/settings";
@@ -334,9 +335,19 @@ export default class ModalFormsLitePlugin extends Plugin {
 
     openCreateFormModal(): void {
         new FormMetaModal(this.app, {
+            folders: folderNames(this.settings.forms),
             isNameTaken: (name) => this.isNameTaken(name),
-            onSubmit: async ({ name, title, command, template }) => {
-                await this.upsertForm({ name, title, version: 1, command, template, fields: [] });
+            onSubmit: async ({ name, title, folder, icon, command, template }) => {
+                await this.upsertForm({
+                    name,
+                    title,
+                    version: 1,
+                    folder,
+                    icon,
+                    command,
+                    template,
+                    fields: [],
+                });
                 new Notice(`Форма «${title}» создана`);
             },
         }).open();

@@ -102,6 +102,12 @@ function parseForm(raw: unknown): FormDefinition | null {
 
     const form: FormDefinition = { name, title, version, fields };
 
+    const folder = asString(raw.folder).trim();
+    if (folder !== "") form.folder = folder;
+
+    const icon = asString(raw.icon).trim();
+    if (icon !== "") form.icon = icon;
+
     const command = parseCommand(raw.command);
     if (command) form.command = command;
 

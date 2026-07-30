@@ -1,4 +1,5 @@
-import { App, Modal, Setting, TextComponent } from "obsidian";
+import { App, Modal, Setting, setIcon, TextComponent } from "obsidian";
+import { DEFAULT_FORM_ICON } from "../core/formFolders";
 import { isValidName } from "../core/naming";
 import {
     COMMAND_MODE_LABELS,
@@ -12,11 +13,15 @@ import type {
     OutputFormat,
 } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
+import { IconSuggest } from "./IconSuggest";
 import { restrictToLatin } from "./restrictToLatin";
+import { ValueSuggest } from "./ValueSuggest";
 
 export interface FormMeta {
     name: string;
     title: string;
+    folder?: string;
+    icon?: string;
     command?: FormCommand;
     template?: string;
 }
@@ -24,6 +29,8 @@ export interface FormMeta {
 interface FormMetaOptions {
     /** Если передана — режим правки, иначе создание. */
     form?: FormDefinition;
+    /** Уже существующие папки — для подсказки, чтобы не плодить опечатки. */
+    folders: string[];
     isNameTaken: (name: string) => boolean;
     onSubmit: (meta: FormMeta) => void;
 }
@@ -39,8 +46,11 @@ function defaultCommand(): FormCommand {
 export class FormMetaModal extends Modal {
     private name: string;
     private title: string;
+    private folder: string;
+    private icon: string;
     private command: FormCommand;
     private template: string;
+    private iconPreview: HTMLElement | null = null;
     private readonly fields: FieldDefinition[];
     private commandEl: HTMLElement | null = null;
     private templateInput: HTMLTextAreaElement | null = null;
@@ -57,6 +67,8 @@ export class FormMetaModal extends Modal {
         this.command = options.form?.command
             ? { ...options.form.command }
             : defaultCommand();
+        this.folder = options.form?.folder ?? "";
+        this.icon = options.form?.icon ?? "";
         this.template = options.form?.template ?? "";
         this.fields = options.form?.fields ?? [];
     }
@@ -97,6 +109,48 @@ export class FormMetaModal extends Modal {
                         this.clearError();
                     }),
             );
+
+        new Setting(contentEl)
+            .setName("Папка")
+            .setDesc("Ярлык для группировки в списке форм. Пусто — форма без папки")
+            .addText((text) => {
+                text.setPlaceholder("например, Чтение")
+                    .setValue(this.folder)
+                    .onChange((value) => {
+                        this.folder = value;
+                    });
+                new ValueSuggest(
+                    this.app,
+                    text.inputEl,
+                    () => this.options.folders.map((name) => ({ value: name, label: name })),
+                    (value) => {
+                        this.folder = value;
+                        text.setValue(value);
+                    },
+                );
+            });
+
+        new Setting(contentEl)
+            .setName("Иконка")
+            .setDesc("Показывается на карточке формы")
+            .addExtraButton((button) => {
+                this.iconPreview = button.extraSettingsEl;
+                button.setDisabled(true);
+                this.renderIconPreview();
+                return button;
+            })
+            .addText((text) => {
+                text.setPlaceholder(DEFAULT_FORM_ICON)
+                    .setValue(this.icon)
+                    .onChange((value) => {
+                        this.icon = value.trim();
+                        this.renderIconPreview();
+                    });
+                new IconSuggest(this.app, text.inputEl, (icon) => {
+                    this.icon = icon;
+                    this.renderIconPreview();
+                });
+            });
 
         new Setting(contentEl).setName("Команда в палитре").setHeading();
 
@@ -194,6 +248,13 @@ export class FormMetaModal extends Modal {
         input.focus();
     }
 
+    private renderIconPreview(): void {
+        const box = this.iconPreview;
+        if (!box) return;
+        box.empty();
+        setIcon(box, this.icon === "" ? DEFAULT_FORM_ICON : this.icon);
+    }
+
     private renderCommand(): void {
         const container = this.commandEl;
         if (!container) return;
@@ -287,9 +348,14 @@ export class FormMetaModal extends Modal {
         this.close();
         // Пустой заголовок — не ошибка: подставляем идентификатор.
         const template = this.template.trim();
+        const folder = this.folder.trim();
+        const icon = this.icon.trim();
+
         this.options.onSubmit({
             name,
             title: title === "" ? name : title,
+            folder: folder === "" ? undefined : folder,
+            icon: icon === "" ? undefined : icon,
             command: this.command,
             template: template === "" ? undefined : this.template,
         });

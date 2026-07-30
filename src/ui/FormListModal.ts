@@ -1,5 +1,12 @@
-import { App, Modal, Notice, Setting } from "obsidian";
+import { App, Modal, Notice, setIcon } from "obsidian";
 import { bundleToJson } from "../core/exchange";
+import {
+    DEFAULT_FORM_ICON,
+    folderExists,
+    folderNames,
+    formsInFolder,
+    groupByFolder,
+} from "../core/formFolders";
 import { plural } from "../core/forms";
 import { isValidName } from "../core/naming";
 import type { FormDefinition } from "../core/types";
@@ -9,11 +16,15 @@ import { FormEditorModal } from "./FormEditorModal";
 import { FormMetaModal } from "./FormMetaModal";
 
 /**
- * Перечень сохранённых форм с действиями над ними. Живёт в отдельном окне,
- * чтобы вкладка настроек не разрасталась вместе с числом форм.
+ * Перечень форм с раскладкой по папкам. Слева папки, справа карточки форм
+ * выбранной папки: когда форм становится много, плоский список перестаёт
+ * читаться, а папка — это просто ярлык, никакой иерархии.
  */
 export class FormListModal extends Modal {
-    private listEl: HTMLElement | null = null;
+    /** null — показаны все формы. */
+    private selected: string | null = null;
+    private foldersEl: HTMLElement | null = null;
+    private cardsEl: HTMLElement | null = null;
 
     constructor(
         app: App,
@@ -28,79 +39,130 @@ export class FormListModal extends Modal {
         contentEl.addClass("mfl-modal");
         contentEl.createEl("h3", { text: "Формы", cls: "mfl-title" });
 
-        this.listEl = contentEl.createDiv();
-        this.renderList();
+        const browser = contentEl.createDiv({ cls: "mfl-browser" });
+        this.foldersEl = browser.createDiv({ cls: "mfl-folders" });
+        this.cardsEl = browser.createDiv({ cls: "mfl-cards" });
+
+        this.render();
     }
 
-    private renderList(): void {
-        const container = this.listEl;
+    private get forms(): FormDefinition[] {
+        return this.plugin.settings.forms;
+    }
+
+    private render(): void {
+        // Папка могла исчезнуть вместе с последней своей формой.
+        if (!folderExists(this.forms, this.selected)) this.selected = null;
+        this.renderFolders();
+        this.renderCards();
+    }
+
+    private renderFolders(): void {
+        const container = this.foldersEl;
         if (!container) return;
         container.empty();
-        for (const form of this.plugin.settings.forms) {
-            this.renderRow(container, form);
+
+        this.renderFolderItem(container, null, "Все формы", "layers", this.forms.length);
+
+        for (const entry of groupByFolder(this.forms)) {
+            this.renderFolderItem(
+                container,
+                entry.name,
+                entry.name === "" ? "Без папки" : entry.name,
+                entry.name === "" ? "circle-dashed" : "folder",
+                entry.count,
+            );
         }
     }
 
-    private renderRow(container: HTMLElement, form: FormDefinition): void {
-        const fieldCount = plural(form.fields.length, "поле", "поля", "полей");
+    private renderFolderItem(
+        container: HTMLElement,
+        value: string | null,
+        label: string,
+        icon: string,
+        count: number,
+    ): void {
+        const item = container.createDiv({ cls: "mfl-folder" });
+        if (this.selected === value) item.addClass("is-active");
 
-        // Имя могло приехать из отредактированного руками data.json — такие
-        // формы не выбрасываем, а помечаем, чтобы их переименовали.
-        const description = createFragment((fragment) => {
-            fragment.appendText(`${form.name} · ${fieldCount}`);
-            if (!isValidName(form.name)) {
-                fragment.createDiv({
-                    cls: "mfl-warning",
-                    text: "Идентификатор содержит недопустимые символы — переименуйте форму",
-                });
-            }
+        const iconBox = item.createDiv({ cls: "mfl-folder-icon" });
+        setIcon(iconBox, icon);
+        item.createDiv({ cls: "mfl-folder-name", text: label });
+        item.createDiv({ cls: "mfl-folder-count", text: String(count) });
+
+        item.addEventListener("click", () => {
+            this.selected = value;
+            this.render();
+        });
+    }
+
+    private renderCards(): void {
+        const container = this.cardsEl;
+        if (!container) return;
+        container.empty();
+
+        const forms = formsInFolder(this.forms, this.selected);
+        if (forms.length === 0) {
+            container.createDiv({ cls: "mfl-cards-empty", text: "В этой папке пока пусто" });
+            return;
+        }
+
+        for (const form of forms) this.renderCard(container, form);
+    }
+
+    private renderCard(container: HTMLElement, form: FormDefinition): void {
+        const card = container.createDiv({ cls: "mfl-card" });
+
+        const head = card.createDiv({ cls: "mfl-card-head" });
+        const iconBox = head.createDiv({ cls: "mfl-card-icon" });
+        setIcon(iconBox, form.icon?.trim() || DEFAULT_FORM_ICON);
+
+        const text = head.createDiv({ cls: "mfl-card-text" });
+        text.createDiv({ cls: "mfl-card-title", text: form.title });
+        text.createDiv({
+            cls: "mfl-card-meta",
+            text: `${form.name} · ${plural(form.fields.length, "поле", "поля", "полей")}`,
         });
 
-        new Setting(container)
-            .setName(form.title)
-            .setDesc(description)
-            .addToggle((toggle) =>
-                toggle
-                    .setTooltip("Команда «Заполнить» в палитре команд")
-                    .setValue(form.command?.enabled === true)
-                    .onChange(async (value) => {
-                        await this.plugin.setFormCommand(form.name, value);
-                        this.renderList();
-                    }),
-            )
-            .addExtraButton((button) =>
-                button
-                    .setIcon("pencil")
-                    .setTooltip("Свойства формы")
-                    .onClick(() => this.editMeta(form)),
-            )
-            .addExtraButton((button) =>
-                button
-                    .setIcon("settings")
-                    .setTooltip("Настройка полей")
-                    .onClick(() => this.editFields(form)),
-            )
-            .addExtraButton((button) =>
-                button
-                    .setIcon("copy")
-                    .setTooltip("Дублировать")
-                    .onClick(async () => {
-                        await this.plugin.duplicateForm(form.name);
-                        this.renderList();
-                    }),
-            )
-            .addExtraButton((button) =>
-                button
-                    .setIcon("clipboard-copy")
-                    .setTooltip("Экспорт: скопировать JSON формы")
-                    .onClick(() => void this.exportForm(form)),
-            )
-            .addExtraButton((button) =>
-                button
-                    .setIcon("trash-2")
-                    .setTooltip("Удалить")
-                    .onClick(() => this.deleteForm(form)),
-            );
+        if (!isValidName(form.name)) {
+            text.createDiv({
+                cls: "mfl-warning",
+                text: "Идентификатор содержит недопустимые символы — переименуйте форму",
+            });
+        }
+
+        const marks = head.createDiv({ cls: "mfl-card-marks" });
+        if (form.template) this.mark(marks, "file-text", "Есть шаблон заметки");
+        if (form.command?.enabled) this.mark(marks, "terminal", "Есть команда в палитре");
+
+        const actions = card.createDiv({ cls: "mfl-card-actions" });
+        this.action(actions, "pencil", "Свойства формы", () => this.editMeta(form));
+        this.action(actions, "settings", "Настройка полей", () => this.editFields(form));
+        this.action(actions, "copy", "Дублировать", async () => {
+            await this.plugin.duplicateForm(form.name);
+            this.render();
+        });
+        this.action(actions, "clipboard-copy", "Экспорт в буфер", () => void this.exportForm(form));
+        this.action(actions, "trash-2", "Удалить", () => this.deleteForm(form));
+    }
+
+    private mark(container: HTMLElement, icon: string, tooltip: string): void {
+        const box = container.createDiv({ cls: "mfl-card-mark", attr: { "aria-label": tooltip } });
+        setIcon(box, icon);
+    }
+
+    private action(
+        container: HTMLElement,
+        icon: string,
+        tooltip: string,
+        onClick: () => void,
+    ): void {
+        const button = container.createDiv({
+            cls: "clickable-icon",
+            attr: { "aria-label": tooltip },
+        });
+        setIcon(button, icon);
+        button.addEventListener("click", onClick);
     }
 
     /** Экспорт одной формы: конверт с версией плагина в буфер обмена. */
@@ -119,13 +181,16 @@ export class FormListModal extends Modal {
     private editMeta(form: FormDefinition): void {
         new FormMetaModal(this.app, {
             form,
+            folders: folderNames(this.forms),
             isNameTaken: (name) => this.plugin.isNameTaken(name, form.name),
-            onSubmit: async ({ name, title, command, template }) => {
+            onSubmit: async ({ name, title, folder, icon, command, template }) => {
                 await this.plugin.upsertForm(
-                    { ...form, name, title, command, template },
+                    { ...form, name, title, folder, icon, command, template },
                     form.name,
                 );
-                this.renderList();
+                // Форма могла переехать в другую папку — покажем её там.
+                this.selected = folder ?? "";
+                this.render();
             },
         }).open();
     }
@@ -136,7 +201,7 @@ export class FormListModal extends Modal {
             context: this.plugin.editorContext(),
             onSave: async (edited, originalName) => {
                 await this.plugin.upsertForm(edited, originalName);
-                this.renderList();
+                this.render();
             },
         }).open();
     }
@@ -145,10 +210,11 @@ export class FormListModal extends Modal {
         new ConfirmModal(this.app, {
             title: "Удалить форму?",
             message: `Форма «${form.title}» будет удалена без возможности восстановления.`,
+            icon: "trash-2",
             danger: true,
             onConfirm: async () => {
                 await this.plugin.removeForm(form.name);
-                this.renderList();
+                this.render();
             },
         }).open();
     }
