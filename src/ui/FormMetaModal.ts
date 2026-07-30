@@ -79,7 +79,8 @@ export class FormMetaModal extends Modal {
     }
 
     onOpen(): void {
-        const { contentEl } = this;
+        const { contentEl, modalEl } = this;
+        modalEl.addClass("mfl-meta-modal");
         contentEl.addClass("mfl-modal");
         contentEl.createEl("h3", {
             text: this.isEditing ? "Свойства формы" : "Новая форма",

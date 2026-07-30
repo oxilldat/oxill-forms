@@ -284,6 +284,59 @@
     padding: 0.2rem 0 0.2rem 1rem;
 }
 
+/* === Свойства формы ===
+
+   Строки здесь разворачиваются в колонку: подпись и пояснение сверху, поле
+   во всю ширину — как у блока шаблона ниже по окну. Двухколоночная строка
+   Setting придумана для страницы настроек, где подпись длинная, а
+   управление короткое. Здесь наоборот: пояснения в две-три строки жмут
+   поле ввода до узкой полоски, и в него не помещается даже подсказка. */
+
+.mfl-meta-modal {
+    width: min(680px, 92vw);
+}
+
+.mfl-meta-modal .mfl-settings-group .setting-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+}
+
+.mfl-meta-modal .mfl-settings-group .setting-item-info {
+    margin-right: 0;
+}
+
+.mfl-meta-modal .mfl-settings-group .setting-item-control {
+    width: 100%;
+    justify-content: flex-start;
+}
+
+/* flex вместо ширины: поле занимает всё свободное место и когда стоит одно,
+   и когда делит строку со значком иконки. */
+.mfl-meta-modal .mfl-settings-group .setting-item-control input[type="text"],
+.mfl-meta-modal .mfl-settings-group .setting-item-control select {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+}
+
+/* Переключателю и ряду кнопок колонка не нужна: управление компактное и
+   привычно стоит справа. Ряд кнопок узнаём по пустому названию строки. */
+.mfl-meta-modal .mfl-settings-group .setting-item:has(.checkbox-container),
+.mfl-meta-modal .setting-item:has(.setting-item-name:empty) {
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+}
+
+.mfl-meta-modal .mfl-settings-group .setting-item:has(.checkbox-container) .setting-item-control,
+.mfl-meta-modal .setting-item:has(.setting-item-name:empty) .setting-item-control {
+    width: auto;
+    flex: 0 0 auto;
+    margin-left: auto;
+    justify-content: flex-end;
+}
+
 /* === Вкладка настроек: группы-карточки ===
 
    Заголовок раздела стоит снаружи карточки, строки настроек — внутри неё.
