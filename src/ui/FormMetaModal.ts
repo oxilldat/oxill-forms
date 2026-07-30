@@ -146,15 +146,15 @@ export class FormMetaModal extends Modal {
                 );
             });
 
-        new Setting(look)
-            .setName("Иконка")
-            .addExtraButton((button) => {
-                this.iconPreview = button.extraSettingsEl;
-                button.setDisabled(true);
-                this.renderIconPreview();
-                return button;
-            })
-            .addText((text) => {
+        const iconSetting = new Setting(look).setName("Иконка");
+
+        // Предпросмотр живёт в левой колонке рядом с подписью: в правой он
+        // отъедал бы место у поля, и оно стало бы уже полей соседних строк,
+        // а в секции все однотипные контролы должны быть одной ширины.
+        this.iconPreview = iconSetting.nameEl.createSpan({ cls: "mfl-icon-badge" });
+        this.renderIconPreview();
+
+        iconSetting.addText((text) => {
                 text.setPlaceholder(DEFAULT_FORM_ICON)
                     .setValue(this.icon)
                     .onChange((value) => {

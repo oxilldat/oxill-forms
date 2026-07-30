@@ -187,6 +187,19 @@
     color: var(--text-muted);
 }
 
+/* Предпросмотр иконки стоит рядом с подписью строки. */
+.mfl-icon-badge {
+    display: inline-flex;
+    vertical-align: text-bottom;
+    margin-left: 8px;
+    color: var(--text-muted);
+}
+
+.mfl-icon-badge .svg-icon {
+    width: 1em;
+    height: 1em;
+}
+
 /* Подстановки, доступные в шаблоне: вставляются кликом. */
 .mfl-hints {
     display: flex;
@@ -278,11 +291,6 @@
     display: none;
 }
 
-/* Строки условия показа — подчинённые, поэтому со сдвигом и без границы. */
-.mfl-condition {
-    border-top: none;
-    padding: 0.2rem 0 0.2rem 1rem;
-}
 
 /* === Свойства формы ===
 
@@ -318,21 +326,30 @@
    группы снаружи и всё, что положено в карточку не строкой настроек. */
 .mfl-modal,
 .vertical-tab-content {
-    --mfl-card-pad: 1.25rem;
+    --mfl-card-pad: 16px;
 }
 
 .mfl-settings-group {
     background-color: var(--background-secondary);
-    border-radius: var(--radius-l, 12px);
-    margin-bottom: 0.75rem;
+    border-radius: 12px;
+    /* Зазор между секциями задаёт отступ следующего заголовка, а не карточка:
+       иначе он складывался бы из двух чисел и его нельзя было бы держать. */
+    margin-bottom: 0;
     overflow: hidden;
 }
 
 .mfl-settings-group .setting-item {
     background: none;
+    border: none;
     border-radius: 0;
     margin: 0;
-    padding: 0.85rem var(--mfl-card-pad);
+    padding: 14px var(--mfl-card-pad);
+    display: flex;
+    /* Ключевое: при описании в две строки строка растёт симметрично, а
+       контрол остаётся по центру. При flex-start он прилипал бы к верху. */
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
     border-top: 1px solid var(--background-modifier-border);
 }
 
@@ -340,11 +357,32 @@
     border-top: none;
 }
 
+.mfl-settings-group .setting-item-info {
+    margin-right: 0;
+}
+
+.mfl-settings-group .setting-item-name {
+    font-weight: 500;
+}
+
+.mfl-settings-group .setting-item-description {
+    line-height: 1.4;
+    margin-top: 2px;
+}
+
+/* Контрол не сжимается и стоит по правому краю: у всех строк секции
+   единая правая ось. */
+.mfl-settings-group .setting-item-control {
+    flex-shrink: 0;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 /* Своих отступов у карточки нет — они есть только у строк настроек. Поэтому
    всё, что положено в карточку напрямую, повторяет те же отступы, иначе
    прижималось бы к самому краю и не выравнивалось ни с чем. */
 .mfl-settings-group > .mfl-hints {
-    padding: 0.85rem var(--mfl-card-pad) 0;
+    padding: 14px var(--mfl-card-pad) 0;
 }
 
 .mfl-settings-group > .mfl-hints + .setting-item {
@@ -360,21 +398,21 @@
     resize: vertical;
 }
 
-/* Заголовок стоит над своей карточкой и должен читаться как её подпись:
-   сверху воздуха много, снизу почти нет. Иначе он висит ровно посередине
-   между двумя карточками, и непонятно, к какой относится.
+/* Заголовок стоит над своей карточкой и читается как её подпись: снизу
+   почти вплотную к карточке, сверху — зазор между секциями (32px).
 
    Горизонтальный отступ тот же, что у строк внутри карточки: заголовок,
    его пояснение и содержимое карточки стоят на одной вертикали. */
 .setting-item.setting-item-heading {
     border-top: none;
-    padding: 1.1rem var(--mfl-card-pad) 0.35rem;
-    margin: 0;
+    padding: 0 var(--mfl-card-pad) 8px;
+    margin: 32px 0 0;
 }
 
 .mfl-modal .setting-item.setting-item-heading:first-child,
+.vertical-tab-content .setting-item.setting-item-heading:first-child,
 .mfl-settings-group .setting-item.setting-item-heading {
-    padding-top: 0;
+    margin-top: 0;
 }
 
 .mfl-setting-disabled .setting-item-name {
