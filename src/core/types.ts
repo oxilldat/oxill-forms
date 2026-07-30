@@ -86,13 +86,31 @@ export interface FieldDefinition {
     input: InputType;
 }
 
+/**
+ * Переименование поля. Копится в истории формы, потому что заметки, созданные
+ * до переименования, продолжают хранить старый ключ во frontmatter.
+ */
+export interface FieldRename {
+    /** Версия формы, в которой произошло переименование. */
+    version: number;
+    from: string;
+    to: string;
+}
+
 export interface FormDefinition {
     /** Уникальный идентификатор формы, по нему форма открывается из кода. */
     name: string;
     /** Заголовок модального окна. */
     title: string;
+    /**
+     * Версия формы. Растёт при переименовании поля — то есть при изменениях,
+     * которые расходятся с уже созданными заметками.
+     */
+    version: number;
     /** Добавить команду «Заполнить: …» в палитру команд Obsidian. */
     command?: boolean;
+    /** История переименований, по ней ищутся заметки под починку. */
+    renames?: FieldRename[];
     fields: FieldDefinition[];
 }
 
@@ -113,6 +131,11 @@ export interface PluginSettings {
      * плагин не исполняет пользовательский код ни в одном месте.
      */
     dataviewEnabled: boolean;
+    /**
+     * Сразу после переименования поля пройти по заметкам и переименовать ключ
+     * во frontmatter. Когда выключено, то же делается кнопкой в настройках.
+     */
+    autoUpdateNotes: boolean;
 }
 
 /**

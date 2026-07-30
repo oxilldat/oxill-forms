@@ -1,4 +1,5 @@
 import { stringifyYaml } from "obsidian";
+import { applyTransform, isTransformName } from "./transform";
 
 export type FieldValue = string | number | boolean | string[];
 export type FormData = Record<string, FieldValue>;
@@ -63,14 +64,32 @@ export class FormResult {
     }
 
     /**
-     * Подстановка в шаблон: `{{ ключ }}`. Неизвестные ключи остаются в тексте
-     * как есть — так опечатку видно сразу, а не по пустому месту.
+     * Ссылка на значение: `[[Мария Сидорова]]`. Для полей типа «заметка» и
+     * «выбор из заметок» это то, что нужно в заметке почти всегда.
+     */
+    link(key: string): string {
+        const value = this.data[key];
+        return value === undefined ? "" : applyTransform("link", value);
+    }
+
+    /**
+     * Подстановка в шаблон: `{{ ключ }}` или `{{ ключ | преобразование }}`.
+     * Доступны upper, lower, trim, capitalize, slug, snake, link и list.
+     *
+     * Неизвестный ключ или неизвестное преобразование оставляют шаблон нетронутым —
+     * так опечатка сразу видна в тексте, а не превращается в пустое место.
      */
     asString(template: string): string {
-        return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key: string) => {
-            const value = this.data[key];
-            return value === undefined ? match : flatten(value);
-        });
+        return template.replace(
+            /\{\{\s*(\w+)\s*(?:\|\s*(\w+)\s*)?\}\}/g,
+            (match, key: string, transform?: string) => {
+                const value = this.data[key];
+                if (value === undefined) return match;
+                if (transform === undefined) return flatten(value);
+                if (!isTransformName(transform)) return match;
+                return applyTransform(transform, value);
+            },
+        );
     }
 
     toString(): string {

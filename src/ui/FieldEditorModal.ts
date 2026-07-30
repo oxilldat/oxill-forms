@@ -24,7 +24,11 @@ interface FieldEditorOptions {
     otherFields: FieldDefinition[];
     context: EditorContext;
     isNew?: boolean;
-    onSubmit: (field: FieldDefinition) => void;
+    /**
+     * `previousName` приходит, только если идентификатор поменяли у уже
+     * существующего поля: по нему форма поймёт, что заметки надо починить.
+     */
+    onSubmit: (field: FieldDefinition, previousName?: string) => void;
 }
 
 /**
@@ -453,7 +457,10 @@ export class FieldEditorModal extends Modal {
 
         this.mayClose = true;
         this.close();
-        this.options.onSubmit(this.draft);
+
+        const before = this.options.field.name;
+        const renamed = !this.options.isNew && before !== "" && before !== this.draft.name;
+        this.options.onSubmit(this.draft, renamed ? before : undefined);
     }
 
     private isDirty(): boolean {

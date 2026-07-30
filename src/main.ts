@@ -2,6 +2,7 @@ import { App, Notice, Plugin } from "obsidian";
 import { ModalFormsApi } from "./api";
 import { isDataviewAvailable } from "./core/dataview";
 import * as formsRepo from "./core/forms";
+import { applyNoteUpdates, scanNotes } from "./core/noteMigration";
 import { defaultSettings, parseSettings } from "./core/settings";
 import type { EditorContext, FormDefinition, PluginSettings } from "./core/types";
 import { ModalFormsSettingTab } from "./settings/SettingsTab";
@@ -80,6 +81,28 @@ export default class ModalFormsLitePlugin extends Plugin {
         this.settings.forms = formsRepo.upsertForm(this.settings.forms, form, originalName);
         await this.saveSettings();
         this.syncFormCommands();
+
+        if (this.settings.autoUpdateNotes) await this.updateNotesFor(form);
+    }
+
+    /**
+     * Приводит frontmatter заметок в соответствие с переименованными полями.
+     * Идемпотентно: заметку с уже новым ключом поиск не находит, так что
+     * повторный вызов ничего не делает.
+     */
+    async updateNotesFor(form: FormDefinition): Promise<void> {
+        if ((form.renames ?? []).length === 0) return;
+
+        const updates = scanNotes(this.app, [form]);
+        if (updates.length === 0) return;
+
+        const { changed, failed } = await applyNoteUpdates(this.app, updates);
+        if (changed > 0) {
+            new Notice(`Обновлено заметок: ${changed}`);
+        }
+        if (failed.length > 0) {
+            new Notice(`Не удалось обновить: ${failed.length}. Подробности в консоли`);
+        }
     }
 
     async removeForm(name: string): Promise<void> {
@@ -161,7 +184,7 @@ export default class ModalFormsLitePlugin extends Plugin {
         new FormMetaModal(this.app, {
             isNameTaken: (name) => this.isNameTaken(name),
             onSubmit: async ({ name, title }) => {
-                await this.upsertForm({ name, title, fields: [] });
+                await this.upsertForm({ name, title, version: 1, fields: [] });
                 new Notice(`Форма «${title}» создана`);
             },
         }).open();

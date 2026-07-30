@@ -1,10 +1,15 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { isDataviewAvailable } from "../core/dataview";
+import { applyNoteUpdates, scanNotes } from "../core/noteMigration";
+import type { NoteUpdate } from "../core/noteMigration";
 import type ModalFormsLitePlugin from "../main";
 import { FolderSuggest } from "../ui/FolderSuggest";
 import { FormListModal } from "../ui/FormListModal";
 
 export class ModalFormsSettingTab extends PluginSettingTab {
+    /** Результат последнего сканирования: null — ещё не искали. */
+    private found: NoteUpdate[] | null = null;
+
     constructor(
         app: App,
         private plugin: ModalFormsLitePlugin,
@@ -65,6 +70,86 @@ export class ModalFormsSettingTab extends PluginSettingTab {
             );
 
         this.renderDataviewSetting();
+
+        new Setting(containerEl).setName("Заметки").setHeading();
+
+        new Setting(containerEl)
+            .setName("Автоматически обновлять заметки при изменении формы")
+            .setDesc(
+                "Если переименовать поле, плагин сразу переименует ключ во frontmatter " +
+                    "заметок, созданных этой формой",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.autoUpdateNotes)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings({ autoUpdateNotes: value });
+                        this.found = null;
+                        this.display();
+                    }),
+            );
+
+        // Кнопка нужна только в ручном режиме: при автоматическом чинить нечего.
+        if (!this.plugin.settings.autoUpdateNotes) this.renderScanSetting();
+    }
+
+    /**
+     * Две стадии в одной кнопке: сначала поиск, потом применение найденного.
+     * Разделено намеренно — правка frontmatter необратима, и увидеть объём
+     * до применения важнее, чем сэкономить нажатие.
+     */
+    private renderScanSetting(): void {
+        const setting = new Setting(this.containerEl).setName("Заметки со старыми полями");
+
+        if (this.found === null) {
+            setting.setDesc("Проверить, остались ли заметки с прежними названиями полей");
+            setting.addButton((button) =>
+                button.setButtonText("Сканировать хранилище").onClick(() => {
+                    const found = scanNotes(this.app, this.plugin.settings.forms);
+                    if (found.length === 0) {
+                        new Notice("Заметок со старыми полями не найдено");
+                        return;
+                    }
+                    this.found = found;
+                    this.display();
+                }),
+            );
+            return;
+        }
+
+        const names = this.found.map((update) => update.file.path);
+        const preview = names.slice(0, 5).join(", ");
+        setting.setDesc(
+            `Найдено: ${names.length}. ${preview}${names.length > 5 ? " и другие" : ""}`,
+        );
+
+        setting.addButton((button) =>
+            button.setButtonText("Отмена").onClick(() => {
+                this.found = null;
+                this.display();
+            }),
+        );
+
+        setting.addButton((button) =>
+            button
+                .setButtonText(`Обновить заметки (${names.length})`)
+                .setCta()
+                .onClick(async () => {
+                    const updates = this.found ?? [];
+                    this.found = null;
+                    const { changed, failed } = await applyNoteUpdates(this.app, updates);
+                    new Notice(`Обновлено заметок: ${changed}`);
+                    if (failed.length > 0) {
+                        new Notice(`Не удалось обновить: ${failed.length}. Подробности в консоли`);
+                    }
+                    this.display();
+                }),
+        );
+    }
+
+    /** Результат сканирования не должен переживать закрытие настроек. */
+    hide(): void {
+        this.found = null;
     }
 
     /**

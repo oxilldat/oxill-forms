@@ -2,6 +2,7 @@ import type {
     ConditionKind,
     FieldCondition,
     FieldDefinition,
+    FieldRename,
     FormDefinition,
     InputType,
     PluginSettings,
@@ -16,6 +17,7 @@ export function defaultSettings(): PluginSettings {
         fileFolder: "",
         skipDiscardConfirm: false,
         dataviewEnabled: false,
+        autoUpdateNotes: true,
     };
 }
 
@@ -54,6 +56,7 @@ export function parseSettings(raw: unknown): PluginSettings {
         fileFolder: asString(raw.fileFolder, defaults.fileFolder),
         skipDiscardConfirm: raw.skipDiscardConfirm === true,
         dataviewEnabled: raw.dataviewEnabled === true,
+        autoUpdateNotes: raw.autoUpdateNotes !== false,
     };
 }
 
@@ -71,9 +74,28 @@ function parseForm(raw: unknown): FormDefinition | null {
         if (field && !fields.some((f) => f.name === field.name)) fields.push(field);
     }
 
-    const form: FormDefinition = { name, title, fields };
+    // Формы, созданные до появления нумерации, все одной формы — считаем их
+    // первой версией. Пока формат не переделывался, это допущение верное.
+    const version = Math.max(1, Math.trunc(asNumber(raw.version, 1)));
+
+    const form: FormDefinition = { name, title, version, fields };
     if (raw.command === true) form.command = true;
+
+    const renames = parseRenames(raw.renames);
+    if (renames.length > 0) form.renames = renames;
+
     return form;
+}
+
+function parseRenames(raw: unknown): FieldRename[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((candidate) => {
+        if (!isRecord(candidate)) return [];
+        const from = asString(candidate.from).trim();
+        const to = asString(candidate.to).trim();
+        if (from === "" || to === "" || from === to) return [];
+        return [{ version: Math.max(1, Math.trunc(asNumber(candidate.version, 1))), from, to }];
+    });
 }
 
 function parseField(raw: unknown): FieldDefinition | null {

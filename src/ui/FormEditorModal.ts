@@ -22,6 +22,8 @@ export class FormEditorModal extends Modal {
     /** Слепок при открытии — по нему понимаем, были ли правки. */
     private readonly snapshot: string;
     private mayClose = false;
+    /** Переименования, накопленные за этот сеанс правки. */
+    private pendingRenames: { from: string; to: string }[] = [];
     private fieldsEl: HTMLElement | null = null;
     private errorEl: HTMLElement | null = null;
 
@@ -79,8 +81,9 @@ export class FormEditorModal extends Modal {
             field,
             otherFields: this.draft.fields.filter((other) => other !== field),
             context: this.options.context,
-            onSubmit: (edited) => {
+            onSubmit: (edited, previousName) => {
                 this.draft.fields[index] = edited;
+                if (previousName !== undefined) this.recordRename(previousName, edited.name);
                 this.renderFields();
             },
         }).open();
@@ -139,13 +142,39 @@ export class FormEditorModal extends Modal {
             return;
         }
 
+        // Версию поднимаем только при переименованиях: именно они расходятся
+        // с уже созданными заметками. Прочие правки заметок не касаются.
+        if (this.pendingRenames.length > 0) {
+            const version = this.draft.version + 1;
+            this.draft.version = version;
+            this.draft.renames = [
+                ...(this.draft.renames ?? []),
+                ...this.pendingRenames.map((rename) => ({ ...rename, version })),
+            ];
+        }
+
         this.mayClose = true;
         this.close();
         this.options.onSave(this.draft, this.originalName);
     }
 
+    /**
+     * Копит переименования за сеанс правки. Цепочку a → b → c сворачиваем в
+     * a → c, а возврат к исходному имени убираем совсем: заметки в этих
+     * случаях чинить не нужно.
+     */
+    private recordRename(from: string, to: string): void {
+        const chained = this.pendingRenames.find((rename) => rename.to === from);
+        if (chained) {
+            chained.to = to;
+        } else {
+            this.pendingRenames.push({ from, to });
+        }
+        this.pendingRenames = this.pendingRenames.filter((rename) => rename.from !== rename.to);
+    }
+
     private isDirty(): boolean {
-        return JSON.stringify(this.draft) !== this.snapshot;
+        return JSON.stringify(this.draft) !== this.snapshot || this.pendingRenames.length > 0;
     }
 
     /**
