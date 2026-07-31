@@ -1,5 +1,6 @@
 import { AbstractInputSuggest, App } from "obsidian";
 import { DataviewError, runDataviewQuery } from "../core/dataview";
+import { t } from "../i18n";
 import type { FormData } from "../core/FormResult";
 
 interface DataviewSuggestOptions {
@@ -50,7 +51,7 @@ export class DataviewSuggest extends AbstractInputSuggest<string> {
                 this.cache = { signature, values };
             } catch (error) {
                 const message =
-                    error instanceof DataviewError ? error.message : "Не удалось выполнить запрос";
+                    error instanceof DataviewError ? error.message : t("fill.queryFailed");
                 this.options.onError(message);
                 this.cache = { signature, values: [] };
             }

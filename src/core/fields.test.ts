@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { setLanguage } from "../i18n";
 import {
     createField,
     defaultInputFor,
@@ -10,6 +11,10 @@ import {
     validateField,
 } from "./fields";
 import type { FieldDefinition } from "./types";
+
+// Сообщения переводятся, поэтому язык задаём явно: иначе проверки
+// зависели бы от языка того, кто запускает тесты.
+setLanguage("ru");
 
 function field(name: string, extra: Partial<FieldDefinition> = {}): FieldDefinition {
     return { name, input: { type: "text" }, ...extra };

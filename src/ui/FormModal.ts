@@ -2,6 +2,7 @@ import { App, Modal, Setting } from "obsidian";
 import { IMAGE_ACCEPT, isAllowedImage, saveAttachment, toWikiLink } from "../core/attachments";
 import { acceptAttribute, formatExtensions, isAllowedExtension } from "../core/extensions";
 import { conditionMet } from "../core/conditions";
+import { t } from "../i18n";
 import { DataviewError, runDataviewQuery } from "../core/dataview";
 import { renderTemplate } from "../core/format";
 import { excludeMatching } from "../core/patterns";
@@ -98,10 +99,10 @@ export class FormModal extends Modal {
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 
         new Setting(contentEl)
-            .addButton((button) => button.setButtonText("Отмена").onClick(() => this.cancel()))
+            .addButton((button) => button.setButtonText(t("common.cancel")).onClick(() => this.cancel()))
             .addButton((button) =>
                 button
-                    .setButtonText("Отправить")
+                    .setButtonText(t("common.submit"))
                     .setCta()
                     .onClick(() => this.submit()),
             );
@@ -313,7 +314,7 @@ export class FormModal extends Modal {
                     text.onChange((value) => this.setValue(field.name, value));
 
                     if (!this.runtime.dataviewEnabled) {
-                        text.setPlaceholder("Поля Dataview отключены в настройках");
+                        text.setPlaceholder(t("fill.dataviewOff"));
                         return;
                     }
 
@@ -334,10 +335,10 @@ export class FormModal extends Modal {
                 setting.addText((text) => {
                     text.setPlaceholder(
                         available.length === 0
-                            ? `В папке «${input.folder}» нет заметок`
+                            ? t("fill.noNotesInFolder", { folder: input.folder })
                             : hint !== ""
                               ? hint
-                              : "Начните вводить название",
+                              : t("fill.typeNoteName"),
                     );
                     if (available.length === 0) text.setDisabled(true);
                     if (preset !== undefined) text.setValue(String(preset));
@@ -354,7 +355,7 @@ export class FormModal extends Modal {
                     if (hint !== "") text.setPlaceholder(hint);
                     // Без подсказки не видно, что список папок сужен.
                     else if (input.parent !== undefined) {
-                        text.setPlaceholder(`Папка внутри «${input.parent}»`);
+                        text.setPlaceholder(t("fill.folderInside", { folder: input.parent }));
                     }
                     if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
@@ -454,7 +455,7 @@ export class FormModal extends Modal {
                 };
             } catch (error) {
                 const message =
-                    error instanceof DataviewError ? error.message : "Не удалось выполнить запрос";
+                    error instanceof DataviewError ? error.message : t("fill.queryFailed");
                 this.setFieldError(fieldName, message);
                 cache = { signature, options: [] };
             }
@@ -511,7 +512,7 @@ export class FormModal extends Modal {
 
             if (isImage && !isAllowedImage(file.name)) {
                 info.addClass("mfl-error");
-                info.setText("Подходят только JPEG, PNG и WebP");
+                info.setText(t("fill.imageOnly"));
                 picker.value = "";
                 return;
             }
@@ -520,13 +521,13 @@ export class FormModal extends Modal {
             // расширение проверяем ещё раз здесь.
             if (!isAllowedExtension(file.name, allowed)) {
                 info.addClass("mfl-error");
-                info.setText(`Подходят только: ${formatExtensions(allowed)}`);
+                info.setText(t("fill.extensionsOnly", { list: formatExtensions(allowed) }));
                 picker.value = "";
                 return;
             }
 
             info.removeClass("mfl-error");
-            info.setText("Сохраняю…");
+            info.setText(t("fill.saving"));
 
             try {
                 // Папка поля важнее общей: общая остаётся значением по
@@ -548,7 +549,7 @@ export class FormModal extends Modal {
             } catch (error) {
                 console.error("[modal-forms-lite] не удалось сохранить вложение", error);
                 info.addClass("mfl-error");
-                info.setText("Не удалось сохранить файл");
+                info.setText(t("fill.saveFailed"));
                 picker.value = "";
             }
         });
@@ -629,7 +630,7 @@ export class FormModal extends Modal {
         const errors = new Map<string, string>();
 
         for (const name of this.unknownNotes()) {
-            errors.set(name, "Выберите заметку из списка: такой в папке нет");
+            errors.set(name, t("fill.unknownNote"));
         }
 
         for (const field of this.form.fields) {
@@ -638,7 +639,7 @@ export class FormModal extends Modal {
             if (this.isEmpty(this.values[field.name])) {
                 // Про пустое поле говорим только если ответ обязателен: у
                 // непустых правил к пустоте претензий нет.
-                if (field.required) errors.set(field.name, "Поле обязательное");
+                if (field.required) errors.set(field.name, t("fill.required"));
                 continue;
             }
 
@@ -649,7 +650,9 @@ export class FormModal extends Modal {
         if (errors.size > 0) {
             this.showErrors(errors);
             this.errorEl?.setText(
-                errors.size === 1 ? "Одно поле требует внимания" : `Полей с ошибками: ${errors.size}`,
+                errors.size === 1
+                    ? t("fill.oneError")
+                    : t("fill.manyErrors", { count: errors.size }),
             );
             return;
         }
@@ -736,14 +739,13 @@ export class FormModal extends Modal {
         }
 
         new ConfirmModal(this.app, {
-            title: "Закрыть форму?",
+            title: t("fill.discardTitle"),
             message:
-                "Форма заполнена, но не отправлена. Введённые данные будут потеряны — " +
-                "вернитесь и нажмите «Отправить», чтобы их сохранить.",
+                t("fill.discardText"),
             icon: "alert-triangle",
             danger: true,
-            confirmText: "Закрыть без отправки",
-            cancelText: "Вернуться к заполнению",
+            confirmText: t("fill.discardConfirm"),
+            cancelText: t("fill.discardCancel"),
             // answer() выставит признак ответа, и повторный close() уже
             // пройдёт насквозь, не спрашивая второй раз.
             onConfirm: () => this.answer(new FormResult({}, "cancelled")),

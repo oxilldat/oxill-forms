@@ -8,6 +8,7 @@ import {
     validateFields,
 } from "../core/fields";
 import { inputTypeLabel } from "../core/labels";
+import { t } from "../i18n";
 import type { EditorContext, FieldDefinition, FormDefinition } from "../core/types";
 import { ConfirmModal } from "./ConfirmModal";
 import { FieldEditor } from "./FieldEditor";
@@ -63,22 +64,22 @@ export class FormEditorModal extends Modal {
         modalEl.addClass("mfl-wide-modal");
         contentEl.addClass("mfl-modal");
 
-        contentEl.createEl("h3", { text: `Форма: ${this.draft.title}`, cls: "mfl-title" });
+        contentEl.createEl("h3", { text: t("editor.title", { title: this.draft.title }), cls: "mfl-title" });
 
         this.fieldsEl = contentEl.createDiv({ cls: "mfl-fields" });
         this.renderFields();
 
         new Setting(contentEl).addButton((button) =>
-            button.setButtonText("Добавить поле").onClick(() => this.addField()),
+            button.setButtonText(t("editor.addField")).onClick(() => this.addField()),
         );
 
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 
         new Setting(contentEl)
-            .addButton((button) => button.setButtonText("Отмена").onClick(() => this.close()))
+            .addButton((button) => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
             .addButton((button) =>
                 button
-                    .setButtonText("Сохранить")
+                    .setButtonText(t("common.save"))
                     .setCta()
                     .onClick(() => this.submit()),
             );
@@ -112,7 +113,7 @@ export class FormEditorModal extends Modal {
         // перетаскивание всего блока мешало бы просто кликать по настройкам.
         const handle = header.createDiv({
             cls: "mfl-field-handle",
-            attr: { "aria-label": "Перетащить", draggable: "true" },
+            attr: { "aria-label": t("editor.drag"), draggable: "true" },
         });
         setIcon(handle, "grip-vertical");
         handle.addEventListener("dragstart", (event) => {
@@ -148,15 +149,15 @@ export class FormEditorModal extends Modal {
         caption.createSpan({ cls: "mfl-field-type", text: inputTypeLabel(field.input.type) });
         caption.addEventListener("click", () => chevron.click());
 
-        this.iconButton(header, "arrow-up", "Выше", () => {
+        this.iconButton(header, "arrow-up", t("editor.up"), () => {
             this.draft.fields = moveField(this.draft.fields, index, -1);
             this.renderFields();
         });
-        this.iconButton(header, "arrow-down", "Ниже", () => {
+        this.iconButton(header, "arrow-down", t("editor.down"), () => {
             this.draft.fields = moveField(this.draft.fields, index, 1);
             this.renderFields();
         });
-        this.iconButton(header, "copy", "Дублировать поле", () => {
+        this.iconButton(header, "copy", t("editor.duplicate"), () => {
             this.draft.fields = duplicateField(this.draft.fields, index);
             // Копия сразу раскрыта: её всё равно надо править — ради этого
             // её и делают.
@@ -164,7 +165,7 @@ export class FormEditorModal extends Modal {
             if (copy) this.expanded.add(copy);
             this.renderFields();
         });
-        this.iconButton(header, "trash-2", "Удалить поле", () => {
+        this.iconButton(header, "trash-2", t("editor.deleteField"), () => {
             this.expanded.delete(field);
             this.draft.fields = removeFieldAt(this.draft.fields, index);
             this.renderFields();
@@ -334,14 +335,13 @@ export class FormEditorModal extends Modal {
         }
 
         new ConfirmModal(this.app, {
-            title: "Закрыть без сохранения?",
+            title: t("editor.discardTitle"),
             message:
-                "Изменения в составе полей не сохранены и будут потеряны. " +
-                "Вернитесь и нажмите «Сохранить», чтобы их оставить.",
+                t("editor.discardText"),
             icon: "alert-triangle",
             danger: true,
-            confirmText: "Закрыть без сохранения",
-            cancelText: "Вернуться к правке",
+            confirmText: t("editor.discardConfirm"),
+            cancelText: t("editor.discardCancel"),
             onConfirm: () => {
                 this.mayClose = true;
                 this.close();

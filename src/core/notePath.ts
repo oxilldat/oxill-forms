@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { renderTemplate } from "./format";
 import type { FormData } from "./FormResult";
 
@@ -53,7 +54,7 @@ export function renderNoteName(
     const source = template?.trim() ?? "";
     const rendered = source === "" ? "" : renderTemplate(source, data);
     const name = tidy(rendered.replace(FORBIDDEN, "-"));
-    return name === "" ? tidy(fallback.replace(FORBIDDEN, "-")) || "Без имени" : name;
+    return name === "" ? tidy(fallback.replace(FORBIDDEN, "-")) || t("note.unnamed") : name;
 }
 
 /**

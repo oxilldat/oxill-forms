@@ -1,3 +1,5 @@
+import { t, tp } from "../i18n";
+import type { TranslationKey } from "../i18n";
 import { compilePattern } from "./patterns";
 import type { FieldValue } from "./FormResult";
 import type { FieldDefinition, FieldRules, InputTypeName } from "./types";
@@ -33,16 +35,16 @@ export function hasRules(type: InputTypeName): boolean {
 }
 
 /** Простая проверка формата — по типу поля, без всяких настроек. */
-const FORMATS: Partial<Record<InputTypeName, { pattern: RegExp; message: string }>> = {
+const FORMATS: Partial<Record<InputTypeName, { pattern: RegExp; message: TranslationKey }>> = {
     email: {
         pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-        message: "Похоже, это не адрес почты",
+        message: "rules.email",
     },
     tel: {
         // Намеренно широко: номера в мире записывают по-разному, и придираться
         // к скобкам и пробелам плагин не вправе.
         pattern: /^[+\d][\d\s()\-.]{4,}$/,
-        message: "Похоже, это не номер телефона",
+        message: "rules.tel",
     },
 };
 
@@ -51,15 +53,6 @@ function isEmpty(value: FieldValue | undefined): boolean {
     if (Array.isArray(value)) return value.length === 0;
     if (typeof value === "string") return value.trim() === "";
     return false;
-}
-
-function plural(count: number, one: string, few: string, many: string): string {
-    const mod100 = count % 100;
-    if (mod100 >= 11 && mod100 <= 14) return many;
-    const mod10 = count % 10;
-    if (mod10 === 1) return one;
-    if (mod10 >= 2 && mod10 <= 4) return few;
-    return many;
 }
 
 /**
@@ -78,31 +71,27 @@ export function checkValue(field: FieldDefinition, value: FieldValue | undefined
 
     const format = FORMATS[type];
     if (format && typeof value === "string" && !format.pattern.test(value.trim())) {
-        return fail(format.message);
+        return fail(t(format.message));
     }
 
     if (NUMERIC.includes(type)) {
         const number = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-        if (!Number.isFinite(number)) return fail("Нужно число");
+        if (!Number.isFinite(number)) return fail(t("rules.number"));
         if (rules.min !== undefined && number < rules.min) {
-            return fail(`Не меньше ${rules.min}`);
+            return fail(t("rules.min", { min: rules.min }));
         }
         if (rules.max !== undefined && number > rules.max) {
-            return fail(`Не больше ${rules.max}`);
+            return fail(t("rules.max", { max: rules.max }));
         }
     }
 
     if (COUNTABLE.includes(type)) {
         const count = Array.isArray(value) ? value.length : 1;
         if (rules.minLength !== undefined && count < rules.minLength) {
-            const word = plural(rules.minLength, "значение", "значения", "значений");
-            return fail(`Выберите хотя бы ${rules.minLength} ${word}`);
+            return fail(tp("rules.minCount", rules.minLength));
         }
         if (rules.maxLength !== undefined && count > rules.maxLength) {
-            // После «не больше» существительное идёт в родительном падеже:
-            // «не больше одного значения», «не больше трёх значений».
-            const word = plural(rules.maxLength, "значения", "значений", "значений");
-            return fail(`Не больше ${rules.maxLength} ${word}`);
+            return fail(tp("rules.maxCount", rules.maxLength));
         }
         return null;
     }
@@ -110,19 +99,17 @@ export function checkValue(field: FieldDefinition, value: FieldValue | undefined
     if (TEXTUAL.includes(type)) {
         const text = String(value).trim();
         if (rules.minLength !== undefined && text.length < rules.minLength) {
-            const word = plural(rules.minLength, "символа", "символов", "символов");
-            return fail(`Не короче ${rules.minLength} ${word}`);
+            return fail(tp("rules.minLength", rules.minLength));
         }
         if (rules.maxLength !== undefined && text.length > rules.maxLength) {
-            const word = plural(rules.maxLength, "символа", "символов", "символов");
-            return fail(`Не длиннее ${rules.maxLength} ${word}`);
+            return fail(tp("rules.maxLength", rules.maxLength));
         }
 
         const regexp = compilePattern(rules.pattern);
         // Кривое выражение — не повод не пустить ответ дальше: про опечатку
         // скажет редактор поля, а заполняющий тут ни при чём.
         if (regexp !== null && !regexp.test(text)) {
-            return fail("Значение не подходит под заданное правило");
+            return fail(t("rules.pattern"));
         }
     }
 
@@ -134,18 +121,18 @@ export function checkRules(rules: FieldRules | undefined): string | null {
     if (!rules) return null;
 
     if (rules.min !== undefined && rules.max !== undefined && rules.min > rules.max) {
-        return "Минимум больше максимума";
+        return t("rules.badRange");
     }
     if (
         rules.minLength !== undefined &&
         rules.maxLength !== undefined &&
         rules.minLength > rules.maxLength
     ) {
-        return "Наименьшая длина больше наибольшей";
+        return t("rules.badLength");
     }
-    if (rules.minLength !== undefined && rules.minLength < 0) return "Длина не бывает отрицательной";
+    if (rules.minLength !== undefined && rules.minLength < 0) return t("rules.negativeLength");
     if (rules.pattern !== undefined && compilePattern(rules.pattern) === null) {
-        return "Выражение не разбирается";
+        return t("rules.badPattern");
     }
     return null;
 }

@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { isDecorative } from "./types";
 import { freeNameFrom, isValidName } from "./naming";
 import type { FieldDefinition, InputType, InputTypeName } from "./types";
@@ -135,51 +136,51 @@ export function removeFieldAt(fields: FieldDefinition[], index: number): FieldDe
  */
 export function validateField(field: FieldDefinition, others: FieldDefinition[]): string | null {
     const name = field.name.trim();
-    if (name === "") return "Идентификатор не может быть пустым";
-    if (!isValidName(name)) return "Идентификатор — только латинские буквы";
-    if (isFieldNameTaken(others, name)) return "Такой идентификатор в форме уже есть";
+    if (name === "") return t("check.nameEmpty");
+    if (!isValidName(name)) return t("check.nameLatin");
+    if (isFieldNameTaken(others, name)) return t("check.nameTaken");
 
     const input = field.input;
     if (input.type === "select" || input.type === "multiselect") {
         if (input.source === "fixed" && input.options.length === 0) {
-            return "Не задан ни один вариант выбора";
+            return t("check.noOptions");
         }
         if (input.source === "notes" && input.folder.trim() === "") {
-            return "Не указана папка с заметками";
+            return t("check.noFolder");
         }
     }
     if (input.type === "note" && input.folder.trim() === "") {
-        return "Не указана папка с заметками";
+        return t("check.noFolder");
     }
     if (input.type === "dataview" && input.query.trim() === "") {
-        return "Не задан запрос Dataview";
+        return t("check.noQuery");
     }
     if (input.type === "slider") {
-        if (input.min >= input.max) return "Минимум ползунка должен быть меньше максимума";
-        if (input.step <= 0) return "Шаг ползунка должен быть больше нуля";
-        if (input.step > input.max - input.min) return "Шаг больше всего диапазона";
+        if (input.min >= input.max) return t("check.sliderRange");
+        if (input.step <= 0) return t("check.sliderStep");
+        if (input.step > input.max - input.min) return t("check.sliderStepBig");
     }
 
     // Раздел — просто заголовок: он ничего не спрашивает и ничего не возвращает.
     if (isDecorative(input.type)) {
-        if (field.required) return "Раздел не может быть обязательным";
-        if (field.hidden) return "Раздел и так не спрашивает значение — прятать его незачем";
-        if ((field.label ?? "").trim() === "") return "У раздела должен быть заголовок";
+        if (field.required) return t("check.sectionRequired");
+        if (field.hidden) return t("check.sectionHidden");
+        if ((field.label ?? "").trim() === "") return t("check.sectionLabel");
     }
 
     // Скрытое поле пользователь не заполнит, поэтому обязательным быть не может.
     if (field.hidden && field.required) {
-        return "Скрытое поле не может быть обязательным";
+        return t("check.hiddenRequired");
     }
     if (field.hidden && field.condition) {
-        return "У скрытого поля условие показа ничего не меняет";
+        return t("check.hiddenCondition");
     }
 
     if (field.condition) {
         const dependencyName = field.condition.field;
-        if (dependencyName === name) return "Поле не может зависеть от себя";
+        if (dependencyName === name) return t("check.selfCondition");
         if (!others.some((other) => other.name === dependencyName)) {
-            return `Поле «${dependencyName}», от которого зависит показ, не найдено`;
+            return t("check.missingDependency", { name: dependencyName });
         }
     }
 
@@ -194,7 +195,7 @@ export function validateFields(fields: FieldDefinition[]): string | null {
     for (const field of fields) {
         const others = fields.filter((other) => other !== field);
         const error = validateField(field, others);
-        if (error) return `Поле «${field.name || "без имени"}»: ${error}`;
+        if (error) return t("check.fieldPrefix", { name: field.name || t("check.unnamed"), error });
     }
     return null;
 }

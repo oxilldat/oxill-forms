@@ -1,4 +1,5 @@
 import { App } from "obsidian";
+import { t } from "../i18n";
 import type { FormData } from "./FormResult";
 
 /**
@@ -67,11 +68,11 @@ export async function runDataviewQuery(
 ): Promise<string[]> {
     const api = dataviewApi(app);
     if (api === undefined) {
-        throw new DataviewError("Плагин Dataview не установлен или отключён");
+        throw new DataviewError(t("dataview.missing"));
     }
 
     const trimmed = query.trim();
-    if (trimmed === "") throw new DataviewError("Запрос пустой");
+    if (trimmed === "") throw new DataviewError(t("dataview.emptyQuery"));
 
     // Позволяем писать как выражение, так и полноценное тело с return.
     const body = /^return\b/.test(trimmed) ? trimmed : `return ${trimmed}`;
@@ -82,12 +83,12 @@ export async function runDataviewQuery(
         raw = await run(api, (api as { pages?: unknown }).pages, form);
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        throw new DataviewError(`Ошибка в запросе: ${reason}`);
+        throw new DataviewError(t("dataview.queryError", { reason }));
     }
 
     const list = toArray(raw);
     if (list === null) {
-        throw new DataviewError("Запрос должен вернуть список значений");
+        throw new DataviewError(t("dataview.notAList"));
     }
 
     return list.filter((item) => item !== null && item !== undefined).map((item) => String(item));

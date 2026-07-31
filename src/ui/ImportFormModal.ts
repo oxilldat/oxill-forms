@@ -1,4 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
+import { t } from "../i18n";
 import { isNewerVersion, parseBundle } from "../core/exchange";
 import { formCodeFields } from "../core/settings";
 import type { FormDefinition } from "../core/types";
@@ -36,15 +37,15 @@ export class ImportFormModal extends Modal {
         const { contentEl, modalEl } = this;
         modalEl.addClass("mfl-wide-modal");
         contentEl.addClass("mfl-modal");
-        contentEl.createEl("h3", { text: "Импорт формы", cls: "mfl-title" });
+        contentEl.createEl("h3", { text: t("import.title"), cls: "mfl-title" });
 
         new Setting(contentEl)
             .setClass("mfl-textarea")
-            .setName("JSON формы")
-            .setDesc("Вставьте то, что скопировали кнопкой экспорта. Можно сразу несколько форм")
+            .setName(t("import.json"))
+            .setDesc(t("import.jsonDesc"))
             .addTextArea((area) => {
                 area.inputEl.rows = 12;
-                area.setPlaceholder('{ "name": "book", "title": "Книга", ... }').onChange(
+                area.setPlaceholder('{ "name": "book", "title": "Book", ... }').onChange(
                     (value) => {
                         this.text = value;
                         this.acknowledged = false;
@@ -58,10 +59,10 @@ export class ImportFormModal extends Modal {
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 
         new Setting(contentEl)
-            .addButton((button) => button.setButtonText("Отмена").onClick(() => this.close()))
+            .addButton((button) => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
             .addButton((button) =>
                 button
-                    .setButtonText("Импортировать")
+                    .setButtonText(t("import.button"))
                     .setCta()
                     .onClick(() => this.submit()),
             );
@@ -79,19 +80,19 @@ export class ImportFormModal extends Modal {
     private submit(): void {
         this.clearMessages();
 
-        if (this.text.trim() === "") return this.fail("Вставьте JSON формы");
+        if (this.text.trim() === "") return this.fail(t("import.empty"));
 
         let raw: unknown;
         try {
             raw = JSON.parse(this.text);
         } catch (error) {
             const reason = error instanceof Error ? error.message : String(error);
-            return this.fail(`Это не похоже на JSON: ${reason}`);
+            return this.fail(t("import.notJson", { reason }));
         }
 
         const bundle = parseBundle(raw);
         if (!bundle) {
-            return this.fail("В JSON нет формы: нужны как минимум name, title и fields");
+            return this.fail(t("import.noForm"));
         }
 
         // Второе нажатие после показа кода и предупреждений означает согласие.
@@ -126,9 +127,7 @@ export class ImportFormModal extends Modal {
     private showVersionWarning(version: string): void {
         this.warningEl?.createDiv({
             cls: "mfl-warning",
-            text:
-                `Экспорт сделан в версии плагина ${version}, у вас ${this.options.pluginVersion}. ` +
-                "Незнакомые настройки будут отброшены при чтении. Нажмите ещё раз, если согласны.",
+            text: t("import.versionWarn", { version, current: this.options.pluginVersion }),
         });
     }
 
@@ -138,9 +137,7 @@ export class ImportFormModal extends Modal {
 
         box.createDiv({
             cls: "mfl-warning",
-            text:
-                "В форме есть поля с запросами Dataview — это исполняемый код. " +
-                "Прочитайте его и нажмите «Импортировать» ещё раз, если согласны.",
+            text: t("import.codeWarn"),
         });
 
         for (const item of code) {

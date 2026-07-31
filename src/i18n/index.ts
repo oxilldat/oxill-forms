@@ -63,10 +63,23 @@ export function detectLocale(): Locale {
 }
 
 let active: Record<TranslationKey, string> = en;
+let activeLocale: Locale = "en";
 
 export function setLanguage(locale: Locale): void {
     active = CATALOGS[locale];
+    activeLocale = locale;
 }
+
+/**
+ * Ключи, у которых есть формы множественного числа. Их в словаре не один, а
+ * четыре: `.one`, `.few`, `.many`, `.other`.
+ */
+export type PluralKey =
+    | "browser.fields"
+    | "rules.minCount"
+    | "rules.maxCount"
+    | "rules.minLength"
+    | "rules.maxLength";
 
 /**
  * Перевод по ключу. Подстановки в фигурных скобках: `t("greeting", { name })`.
@@ -81,6 +94,21 @@ export function t(key: TranslationKey, params?: Record<string, string | number>)
     return template.replace(/\{(\w+)\}/g, (match, name: string) =>
         name in params ? String(params[name]) : match,
     );
+}
+
+/**
+ * Перевод с числом: «1 поле», «2 поля», «9 полей». Форму выбирает сам
+ * браузер через Intl.PluralRules — правила счёта у языков разные, и держать
+ * их в голове (а тем более в коде плагина) не нужно.
+ *
+ * Число подставляется как `{count}`.
+ */
+export function tp(key: PluralKey, count: number, params?: Record<string, string | number>): string {
+    const category = new Intl.PluralRules(activeLocale).select(count);
+    const exact = `${key}.${category}` as TranslationKey;
+    // У языков без такой формы ключа просто нет — берём общую.
+    const chosen = exact in active ? exact : (`${key}.other` as TranslationKey);
+    return t(chosen, { count, ...params });
 }
 
 export type { TranslationKey };

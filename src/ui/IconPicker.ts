@@ -1,4 +1,5 @@
 import { getIconIds, setIcon } from "obsidian";
+import { t } from "../i18n";
 
 /** Сколько значков рисуем за раз. Их больше тысячи, все сразу — заметная пауза. */
 const PAGE_SIZE = 240;
@@ -57,7 +58,7 @@ export class IconPicker {
 
         const search = this.pop.createEl("input", {
             cls: "mfl-icon-search",
-            attr: { type: "text", placeholder: "Поиск значка" },
+            attr: { type: "text", placeholder: t("icon.search") },
         });
         this.grid = this.pop.createDiv({ cls: "mfl-icon-grid" });
         this.note = this.pop.createDiv({ cls: "mfl-icon-note" });
@@ -162,11 +163,11 @@ export class IconPicker {
 
         if (!this.note) return;
         if (found.length === 0) {
-            this.note.setText("Ничего не нашлось");
+            this.note.setText(t("icon.nothing"));
         } else if (found.length > shown.length) {
-            this.note.setText(`Показано ${shown.length} из ${found.length}. Уточните поиск`);
+            this.note.setText(t("icon.partial", { shown: shown.length, found: found.length }));
         } else {
-            this.note.setText(`Найдено: ${found.length}`);
+            this.note.setText(t("icon.found", { count: found.length }));
         }
     }
 

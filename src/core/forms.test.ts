@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { setLanguage } from "../i18n";
 import { duplicateForm, findForm, freeName, isNameTaken, plural, removeForm, upsertForm } from "./forms";
 import type { FormDefinition } from "./types";
+
+// Сообщения переводятся, поэтому язык задаём явно: иначе проверки
+// зависели бы от языка того, кто запускает тесты.
+setLanguage("ru");
 
 function form(name: string, title = name): FormDefinition {
     return { name, title, version: 1, fields: [] };

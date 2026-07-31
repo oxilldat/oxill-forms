@@ -453,10 +453,10 @@ export default class ModalFormsLitePlugin extends Plugin {
                     delete frontmatter[key];
                 }
             });
-            new Notice(`Шапка заметки «${file.basename}» обновлена`);
+            new Notice(t("fill.noteUpdated", { name: file.basename }));
         } catch (error) {
             console.error("[modal-forms-lite] не удалось обновить шапку", error);
-            new Notice("Не удалось обновить шапку заметки. Подробности в консоли");
+            new Notice(t("fill.noteUpdateFailed"));
         }
     }
 
@@ -517,7 +517,7 @@ export default class ModalFormsLitePlugin extends Plugin {
             return await parseWithTemplater(this.app, text, file);
         } catch (error) {
             console.error("[modal-forms-lite] Templater не отработал", error);
-            new Notice("Templater не смог разобрать шаблон. Подробности в консоли");
+            new Notice(t("fill.templaterFailed"));
             return text;
         }
     }
@@ -556,7 +556,7 @@ export default class ModalFormsLitePlugin extends Plugin {
                     await runTemplaterOnFile(this.app, file);
                 } catch (error) {
                     console.error("[modal-forms-lite] Templater не отработал", error);
-                    new Notice("Templater не смог разобрать шаблон. Подробности в консоли");
+                    new Notice(t("fill.templaterFailed"));
                 }
             }
 
@@ -573,7 +573,7 @@ export default class ModalFormsLitePlugin extends Plugin {
      */
     private async openCreated(file: TFile, openIn: OpenMode): Promise<void> {
         if (openIn === "none") {
-            new Notice(`Заметка «${file.basename}» создана`);
+            new Notice(t("fill.noteCreated", { name: file.basename }));
             return;
         }
 
@@ -623,7 +623,7 @@ export default class ModalFormsLitePlugin extends Plugin {
                     template,
                     fields: [],
                 });
-                new Notice(`Форма «${title}» создана`);
+                new Notice(t("meta.created", { title }));
             },
         }).open();
     }

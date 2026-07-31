@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { freeNameFrom } from "./naming";
 import type { FormDefinition } from "./types";
 
@@ -50,7 +51,7 @@ export function duplicateForm(forms: FormDefinition[], name: string): FormDefini
         ...structuredClone(source),
         // Заголовок свободный, а имя обязано остаться латиницей.
         name: freeName(forms, `${source.name}Copy`),
-        title: `${source.title} (копия)`,
+        title: t("note.copySuffix", { title: source.title }),
     };
     return [...forms, copy];
 }

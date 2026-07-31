@@ -8,7 +8,7 @@ import {
     groupByFolder,
     showsAllForms,
 } from "../core/formFolders";
-import { t } from "../i18n";
+import { t, tp } from "../i18n";
 import { isValidName } from "../core/naming";
 import type { FormDefinition } from "../core/types";
 import type ModalFormsLitePlugin from "../main";
@@ -343,7 +343,7 @@ export class FormListModal extends Modal {
         text.createDiv({ cls: "mfl-card-title", text: form.title });
         text.createDiv({
             cls: "mfl-card-meta",
-            text: `${form.name} · ${t("browser.fields", { count: form.fields.length })}`,
+            text: `${form.name} · ${tp("browser.fields", form.fields.length)}`,
         });
 
         if (!isValidName(form.name)) {

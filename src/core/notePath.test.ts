@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { setLanguage } from "../i18n";
 import { renderNoteFolder, renderNoteName } from "./notePath";
 import type { FormData } from "./FormResult";
+
+// Сообщения переводятся, поэтому язык задаём явно: иначе проверки
+// зависели бы от языка того, кто запускает тесты.
+setLanguage("ru");
 
 const data: FormData = {
     title: "Война и мир",

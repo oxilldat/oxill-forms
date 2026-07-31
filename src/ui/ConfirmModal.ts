@@ -1,4 +1,5 @@
 import { App, Modal, Setting, setIcon } from "obsidian";
+import { t } from "../i18n";
 
 interface ConfirmOptions {
     title: string;
@@ -42,11 +43,11 @@ export class ConfirmModal extends Modal {
         new Setting(contentEl)
             .addButton((button) =>
                 button
-                    .setButtonText(this.options.cancelText ?? "Отмена")
+                    .setButtonText(this.options.cancelText ?? t("common.cancel"))
                     .onClick(() => this.close()),
             )
             .addButton((button) => {
-                button.setButtonText(this.options.confirmText ?? "Удалить").onClick(() => {
+                button.setButtonText(this.options.confirmText ?? t("confirm.delete")).onClick(() => {
                     this.close();
                     this.options.onConfirm();
                 });

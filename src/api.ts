@@ -74,7 +74,7 @@ export class ModalFormsApi {
 
         if (!definition) {
             return Promise.reject(
-                new Error(`Modal Forms Lite: форма «${reference as string}» не найдена`),
+                new Error(`Modal Forms Lite: form "${reference as string}" not found`),
             );
         }
 

@@ -2,6 +2,7 @@ import { App, Setting } from "obsidian";
 import { conditionNeedsValue, conditionsFor } from "../core/conditions";
 import { conditionLabel, inputTypeLabel, INPUT_TYPE_ORDER } from "../core/labels";
 import { isDataviewAvailable } from "../core/dataview";
+import { t } from "../i18n";
 import { defaultInputFor, withSource } from "../core/fields";
 import type {
     ConditionKind,
@@ -48,7 +49,7 @@ export class FieldEditor {
     render(container: HTMLElement): void {
         // Тип живёт в своей карточке и вне перерисовываемого тела: при смене
         // типа тело собирается заново, а список выбора должен остаться.
-        new Setting(plainGroup(container)).setName("Тип").addDropdown((dropdown) => {
+        new Setting(plainGroup(container)).setName(t("field.type")).addDropdown((dropdown) => {
             for (const type of INPUT_TYPE_ORDER) {
                 // Dataview прячем, пока он не включён в настройках. Поле, уже
                 // имеющее этот тип, оставляем — иначе список показал бы не то,
@@ -85,31 +86,30 @@ export class FieldEditor {
         const input = this.field.input;
 
         if (input.type === "note") {
-            this.renderFolderPicker(container, "Папка с заметками", input.folder, (path) => {
+            this.renderFolderPicker(container, t("field.notesFolder"), input.folder, (path) => {
                 input.folder = path;
             });
             return;
         }
 
         if (input.type === "slider") {
-            this.renderNumber(container, "Минимум", input.min, (value) => {
+            this.renderNumber(container, t("field.min"), input.min, (value) => {
                 input.min = value;
             });
-            this.renderNumber(container, "Максимум", input.max, (value) => {
+            this.renderNumber(container, t("field.max"), input.max, (value) => {
                 input.max = value;
             });
-            this.renderNumber(container, "Шаг", input.step, (value) => {
+            this.renderNumber(container, t("field.step"), input.step, (value) => {
                 input.step = value;
             });
             return;
         }
 
         if (input.type === "image" || input.type === "file") {
-            const common = input.type === "image" ? "фотографий" : "файлов";
 
             this.renderFolderPicker(
                 container,
-                "Папка для сохранения",
+                t("field.saveFolder"),
                 input.folder ?? "",
                 (path) => {
                     // Пусто означает «как в настройках»: держим это отсутствием
@@ -117,15 +117,17 @@ export class FieldEditor {
                     if (path.trim() === "") delete input.folder;
                     else input.folder = path.trim();
                 },
-                `Пусто — общая папка из настроек плагина, «Место сохранения ${common}»`,
+                input.type === "image"
+                    ? t("field.saveFolderDescImage")
+                    : t("field.saveFolderDescFile"),
             );
 
             new Setting(container)
-                .setName("Шаблон имени файла")
-                .setDesc("Пусто — имя останется исходным. Понимает {{поле}} этой же формы")
+                .setName(t("field.filenameTemplate"))
+                .setDesc(t("field.filenameTemplateDesc"))
                 .addText((text) =>
                     text
-                        .setPlaceholder("например, {{title}}-обложка")
+                        .setPlaceholder(t("field.filenameTemplateExample"))
                         .setValue(input.filenameTemplate ?? "")
                         .onChange((value) => {
                             if (value.trim() === "") delete input.filenameTemplate;
@@ -135,8 +137,8 @@ export class FieldEditor {
 
             if (input.type === "file") {
                 new Setting(container)
-                    .setName("Допустимые расширения")
-                    .setDesc("Через запятую. Пусто — любые")
+                    .setName(t("field.extensions"))
+                    .setDesc(t("field.extensionsDesc"))
                     .addText((text) =>
                         text
                             .setPlaceholder("pdf, docx, zip")
@@ -160,22 +162,22 @@ export class FieldEditor {
 
         if (input.type === "tag") {
             new Setting(container)
-                .setName("Источник подсказок")
-                .setDesc("Теги, уже встречающиеся в хранилище. Свои тоже можно вводить");
+                .setName(t("field.tagSource"))
+                .setDesc(t("field.tagSourceDesc"));
 
             // Регулярное выражение, а не список имён: служебные теги обычно
             // растут ветками, и «^archive/» отсекает ветку целиком.
             const warning = container.createDiv({ cls: "mfl-warning" });
             const check = (pattern: string): void => {
                 warning.setText(
-                    isValidPattern(pattern) ? "" : "Выражение не разбирается — отбор не сработает",
+                    isValidPattern(pattern) ? "" : t("field.patternBroken"),
                 );
             };
             check(input.exclude ?? "");
 
             new Setting(container)
-                .setName("Не предлагать теги")
-                .setDesc("Регулярное выражение. Например, ^archive/ уберёт всю ветку archive")
+                .setName(t("field.tagExclude"))
+                .setDesc(t("field.tagExcludeDesc"))
                 .addText((text) =>
                     text
                         .setPlaceholder("^archive/")
@@ -193,22 +195,22 @@ export class FieldEditor {
         if (input.type === "folder") {
             this.renderFolderPicker(
                 container,
-                "Выбирать внутри папки",
+                t("field.folderParent"),
                 input.parent ?? "",
                 (path) => {
                     if (path.trim() === "") delete input.parent;
                     else input.parent = path.trim();
                 },
-                "Пусто — можно выбрать любую папку хранилища",
+                t("field.folderParentDesc"),
             );
             return;
         }
 
         if (input.type === "select" || input.type === "multiselect") {
             const kind = input.type;
-            new Setting(container).setName("Источник").addDropdown((dropdown) => {
-                dropdown.addOption("fixed", "Заданный список");
-                dropdown.addOption("notes", "Заметки из папки");
+            new Setting(container).setName(t("field.source")).addDropdown((dropdown) => {
+                dropdown.addOption("fixed", t("field.sourceFixed"));
+                dropdown.addOption("notes", t("field.sourceNotes"));
 
                 // Запрос как источник есть только у множественного выбора и
                 // только при включённом Dataview. Уже выбранный оставляем
@@ -216,7 +218,7 @@ export class FieldEditor {
                 const allowQuery =
                     kind === "multiselect" &&
                     (this.options.context.allowDataview || input.source === "dataview");
-                if (allowQuery) dropdown.addOption("dataview", "Запрос Dataview");
+                if (allowQuery) dropdown.addOption("dataview", t("field.sourceQuery"));
 
                 dropdown.setValue(input.source).onChange((value) => {
                     this.field.input = withSource(
@@ -242,7 +244,7 @@ export class FieldEditor {
                 else {
                     this.renderFolderPicker(
                         container,
-                        "Папка с заметками",
+                        t("field.notesFolder"),
                         input.folder,
                         (path) => {
                             input.folder = path;
@@ -258,7 +260,7 @@ export class FieldEditor {
             });
 
             new Setting(container).addButton((button) =>
-                button.setButtonText("Добавить вариант").onClick(() => {
+                button.setButtonText(t("field.addOption")).onClick(() => {
                     input.options.push({ value: "", label: "" });
                     this.renderInputOptions();
                 }),
@@ -296,8 +298,8 @@ export class FieldEditor {
 
         if (!isSection) {
             new Setting(main)
-                .setName("Идентификатор")
-                .setDesc("Ключ в результате формы. Только латинские буквы")
+                .setName(t("field.name"))
+                .setDesc(t("field.nameDesc"))
                 .addText((text) => {
                     text.setPlaceholder("A - z").setValue(this.field.name);
                     restrictToLatin(text.inputEl, (value) => {
@@ -308,19 +310,19 @@ export class FieldEditor {
         }
 
         new Setting(main)
-            .setName(isSection ? "Заголовок раздела" : "Подпись")
+            .setName(isSection ? t("field.sectionTitle") : t("field.label"))
             .addText((text) =>
                 text
-                    .setPlaceholder(isSection ? "например, Оценка" : "Что видит пользователь")
+                    .setPlaceholder(isSection ? t("field.sectionPlaceholder") : t("field.labelPlaceholder"))
                     .setValue(this.field.label ?? "")
                     .onChange((value) => {
                         this.field.label = value;
                     }),
             );
 
-        new Setting(main).setName("Описание").addText((text) =>
+        new Setting(main).setName(t("field.description")).addText((text) =>
             text
-                .setPlaceholder("Пояснение под подписью")
+                .setPlaceholder(t("field.descriptionPlaceholder"))
                 .setValue(this.field.description ?? "")
                 .onChange((value) => {
                     this.field.description = value;
@@ -329,11 +331,11 @@ export class FieldEditor {
 
         if (!isSection) {
             new Setting(main)
-                .setName("Подсказка в поле")
-                .setDesc("Серый текст внутри пустого поля")
+                .setName(t("field.placeholder"))
+                .setDesc(t("field.placeholderDesc"))
                 .addText((text) =>
                     text
-                        .setPlaceholder("например, фамилия и имя")
+                        .setPlaceholder(t("field.placeholderExample"))
                         .setValue(this.field.placeholder ?? "")
                         .onChange((value) => {
                             this.field.placeholder = value;
@@ -341,13 +343,13 @@ export class FieldEditor {
                 );
 
             new Setting(main)
-                .setName("Значение по умолчанию")
+                .setName(t("field.default"))
                 .setDesc(
-                    "Чем поле заполнено при открытии. Понимает {{today}}, {{now}}, {{datetime}}",
+                    t("field.defaultDesc"),
                 )
                 .addText((text) =>
                     text
-                        .setPlaceholder("например, {{today}}")
+                        .setPlaceholder(t("field.defaultExample"))
                         .setValue(this.field.default ?? "")
                         .onChange((value) => {
                             this.field.default = value;
@@ -356,7 +358,7 @@ export class FieldEditor {
 
             const behavior = plainGroup(container);
 
-            new Setting(behavior).setName("Обязательное").addToggle((toggle) =>
+            new Setting(behavior).setName(t("field.required")).addToggle((toggle) =>
                 toggle.setValue(this.field.required === true).onChange((value) => {
                     this.field.required = value;
                     this.clearError();
@@ -364,10 +366,9 @@ export class FieldEditor {
             );
 
             new Setting(behavior)
-                .setName("Скрытое")
+                .setName(t("field.hidden"))
                 .setDesc(
-                    "В форме не показывается. Значение передаётся из кода через " +
-                        "openForm(..., { values }) и попадает в результат",
+                    t("field.hiddenDesc"),
                 )
                 .addToggle((toggle) =>
                     toggle.setValue(this.field.hidden === true).onChange((value) => {
@@ -402,7 +403,6 @@ export class FieldEditor {
         if (this.field.hidden) return;
 
         const isSection = this.field.input.type === "section";
-        const what = isSection ? "раздел" : "поле";
 
         const container = plainGroup(host);
 
@@ -412,21 +412,21 @@ export class FieldEditor {
         );
         if (candidates.length === 0) {
             new Setting(container)
-                .setName(`Показывать ${what}`)
-                .setDesc("Условие можно задать, когда в форме есть другие поля");
+                .setName(isSection ? t("field.showSection") : t("field.showField"))
+                .setDesc(t("field.conditionNeedsOthers"));
             return;
         }
 
         const condition = this.field.condition;
 
         new Setting(container)
-            .setName(`Показывать ${what}`)
+            .setName(isSection ? t("field.showSection") : t("field.showField"))
             // Пояснение переехало сюда из заголовка группы: заголовков в
             // настройках поля больше нет, а знать про это правило важно.
-            .setDesc(isSection ? "Скрытый раздел уносит все поля до следующего" : "")
+            .setDesc(isSection ? t("field.sectionConditionDesc") : "")
             .addDropdown((dropdown) => {
-                dropdown.addOption("always", "Всегда");
-                dropdown.addOption("conditional", "При условии");
+                dropdown.addOption("always", t("field.always"));
+                dropdown.addOption("conditional", t("field.conditional"));
                 dropdown.setValue(condition ? "conditional" : "always").onChange((value) => {
                     if (value === "always") {
                         delete this.field.condition;
@@ -452,7 +452,7 @@ export class FieldEditor {
 
         const kinds = conditionsFor(dependency.input.type);
 
-        new Setting(container).setClass("mfl-condition").setName("Когда поле").addDropdown(
+        new Setting(container).setClass("mfl-condition").setName(t("field.whenField")).addDropdown(
             (dropdown) => {
                 for (const field of candidates) {
                     dropdown.addOption(field.name, field.label?.trim() || field.name);
@@ -474,7 +474,7 @@ export class FieldEditor {
             },
         );
 
-        new Setting(container).setClass("mfl-condition").setName("Условие").addDropdown(
+        new Setting(container).setClass("mfl-condition").setName(t("field.condition")).addDropdown(
             (dropdown) => {
                 for (const kind of kinds) {
                     dropdown.addOption(kind, conditionLabel(kind));
@@ -493,7 +493,7 @@ export class FieldEditor {
         const numeric =
             dependency.input.type === "number" || dependency.input.type === "slider";
 
-        new Setting(container).setClass("mfl-condition").setName("Значение").addText((text) => {
+        new Setting(container).setClass("mfl-condition").setName(t("field.value")).addText((text) => {
             if (numeric) text.inputEl.type = "number";
             text.setValue(condition.value === undefined ? "" : String(condition.value)).onChange(
                 (entered) => {
@@ -547,15 +547,15 @@ export class FieldEditor {
         };
 
         const countable = type === "multiselect" || type === "tag";
-        numberRow("min", "Не меньше");
-        numberRow("max", "Не больше");
-        numberRow("minLength", countable ? "Значений не меньше" : "Символов не меньше");
-        numberRow("maxLength", countable ? "Значений не больше" : "Символов не больше");
+        numberRow("min", t("field.ruleMin"));
+        numberRow("max", t("field.ruleMax"));
+        numberRow("minLength", countable ? t("field.ruleMinCount") : t("field.ruleMinLength"));
+        numberRow("maxLength", countable ? t("field.ruleMaxCount") : t("field.ruleMaxLength"));
 
         if (allowed.includes("pattern")) {
             new Setting(group)
-                .setName("Соответствует выражению")
-                .setDesc("Регулярное выражение. Например, ^\\d{4}$ — ровно четыре цифры")
+                .setName(t("field.rulePattern"))
+                .setDesc(t("field.rulePatternDesc"))
                 .addText((text) =>
                     text
                         .setPlaceholder("^\\d{4}$")
@@ -570,11 +570,11 @@ export class FieldEditor {
         }
 
         new Setting(group)
-            .setName("Сообщение об ошибке")
-            .setDesc("Пусто — плагин напишет сам. Выражение словами не объяснит")
+            .setName(t("field.ruleMessage"))
+            .setDesc(t("field.ruleMessageDesc"))
             .addText((text) =>
                 text
-                    .setPlaceholder("Год из четырёх цифр")
+                    .setPlaceholder(t("field.ruleMessageExample"))
                     .setValue(rules.message ?? "")
                     .onChange((value) => {
                         if (value.trim() === "") delete rules.message;
@@ -602,19 +602,19 @@ export class FieldEditor {
         if (!isDataviewAvailable(this.app)) {
             container.createDiv({
                 cls: "mfl-warning",
-                text: "Плагин Dataview не установлен или отключён — список будет пустым",
+                text: t("field.dataviewMissing"),
             });
         }
 
         new Setting(container)
             .setClass("mfl-textarea")
-            .setName("Запрос")
+            .setName(t("field.query"))
             .setDesc(
-                'Выражение на JS. Доступны dv, pages и form — значения формы. Пример: dv.pages(\'"Люди"\').map(p => p.file.name)',
+                t("field.queryDesc"),
             )
             .addTextArea((area) =>
                 area
-                    .setPlaceholder('dv.pages(\'"Люди"\').map(p => p.file.name)')
+                    .setPlaceholder(t("field.queryExample"))
                     .setValue(query)
                     .onChange((value) => {
                         onChange(value);
@@ -634,19 +634,19 @@ export class FieldEditor {
     ): void {
         this.renderFolderPicker(
             container,
-            "Папка с заметками",
+            t("field.notesFolder"),
             input.folder,
             (path) => {
                 input.folder = path;
             },
-            "Пусто — заметки всего хранилища",
+            t("field.notesFolderAll"),
         );
 
         const extra = input.folders ?? [];
         extra.forEach((folder, index) => {
-            const setting = new Setting(container).setName("Ещё папка");
+            const setting = new Setting(container).setName(t("field.moreFolder"));
             setting.addText((text) => {
-                text.setPlaceholder("Люди")
+                text.setPlaceholder(t("field.peopleExample"))
                     .setValue(folder)
                     .onChange((value) => {
                         extra[index] = value;
@@ -661,7 +661,7 @@ export class FieldEditor {
             setting.addExtraButton((button) =>
                 button
                     .setIcon("trash-2")
-                    .setTooltip("Убрать папку")
+                    .setTooltip(t("field.removeFolder"))
                     .onClick(() => {
                         extra.splice(index, 1);
                         if (extra.length === 0) delete input.folders;
@@ -671,7 +671,7 @@ export class FieldEditor {
         });
 
         new Setting(container).addButton((button) =>
-            button.setButtonText("Добавить папку").onClick(() => {
+            button.setButtonText(t("field.addFolder")).onClick(() => {
                 input.folders = [...extra, ""];
                 this.renderInputOptions();
             }),
@@ -683,13 +683,13 @@ export class FieldEditor {
         name: string,
         value: string,
         onChange: (path: string) => void,
-        description = "Начните вводить или выберите из списка",
+        description = t("field.folderHint"),
     ): void {
         new Setting(container)
             .setName(name)
             .setDesc(description)
             .addText((text) => {
-                text.setPlaceholder("Книги")
+                text.setPlaceholder(t("field.folderExample"))
                     .setValue(value)
                     .onChange((entered) => {
                         onChange(entered);
@@ -727,7 +727,7 @@ export class FieldEditor {
         const row = new Setting(list).setClass("mfl-option-row");
         row.addText((text) =>
             text
-                .setPlaceholder("значение")
+                .setPlaceholder(t("field.optionValue"))
                 .setValue(option.value)
                 .onChange((value) => {
                     option.value = value;
@@ -736,7 +736,7 @@ export class FieldEditor {
         );
         row.addText((text) =>
             text
-                .setPlaceholder("подпись")
+                .setPlaceholder(t("field.optionLabel"))
                 .setValue(option.label)
                 .onChange((value) => {
                     option.label = value;
@@ -745,7 +745,7 @@ export class FieldEditor {
         row.addExtraButton((button) =>
             button
                 .setIcon("trash-2")
-                .setTooltip("Убрать вариант")
+                .setTooltip(t("field.removeOption"))
                 .onClick(() => {
                     options.splice(index, 1);
                     this.renderInputOptions();

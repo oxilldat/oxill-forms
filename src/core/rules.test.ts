@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { setLanguage } from "../i18n";
 import { checkRules, checkValue, hasRules, rulesFor } from "./rules";
 import type { FieldDefinition, FieldRules, InputType } from "./types";
+
+// Сообщения переводятся, поэтому язык задаём явно: иначе проверки
+// зависели бы от языка того, кто запускает тесты.
+setLanguage("ru");
 
 function field(input: InputType, rules?: FieldRules): FieldDefinition {
     return rules === undefined ? { name: "x", input } : { name: "x", input, rules };

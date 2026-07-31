@@ -1,4 +1,5 @@
 import { App, setIcon } from "obsidian";
+import { t } from "../i18n";
 import type { SelectOption } from "../core/types";
 import { ValueSuggest } from "./ValueSuggest";
 
@@ -43,7 +44,7 @@ export class MultiValueField {
         this.chipsEl = root.createDiv({ cls: "mfl-chips" });
 
         const input = root.createEl("input", { type: "text", cls: "mfl-multi-input" });
-        input.placeholder = options.allowNew ? "Добавить или выбрать" : "Выбрать";
+        input.placeholder = options.allowNew ? t("multi.addOrPick") : t("multi.pick");
 
         new ValueSuggest(options.app, input, () => this.available(), (value) => this.add(value));
 
@@ -108,7 +109,7 @@ export class MultiValueField {
 
             const remove = chip.createDiv({
                 cls: "mfl-chip-remove",
-                attr: { "aria-label": "Убрать" },
+                attr: { "aria-label": t("multi.remove") },
             });
             setIcon(remove, "x");
             remove.addEventListener("click", () => this.remove(value));

@@ -1,5 +1,6 @@
 import { App, Modal, Setting, setIcon, TextComponent } from "obsidian";
 import { DEFAULT_FORM_ICON } from "../core/formFolders";
+import { t } from "../i18n";
 import { isValidName } from "../core/naming";
 import {
     commandModeLabel,
@@ -90,7 +91,7 @@ export class FormMetaModal extends Modal {
         modalEl.addClass("mfl-meta-modal");
         contentEl.addClass("mfl-modal");
         contentEl.createEl("h3", {
-            text: this.isEditing ? "Свойства формы" : "Новая форма",
+            text: this.isEditing ? t("meta.editTitle") : t("meta.newTitle"),
             cls: "mfl-title",
         });
 
@@ -99,13 +100,13 @@ export class FormMetaModal extends Modal {
         // жались бы в узкую колонку.
         const main = settingsGroup(
             contentEl,
-            "Основное",
-            "По идентификатору форма вызывается из кода, заголовок виден в её шапке",
+            t("meta.mainGroup"),
+            t("meta.mainGroupDesc"),
         );
 
         new Setting(main)
-            .setName("Идентификатор")
-            .setDesc("Только латинские буквы")
+            .setName(t("meta.name"))
+            .setDesc(t("meta.nameDesc"))
             .addText((text) => {
                 this.nameInput = text;
                 text.setPlaceholder("A - z").setValue(this.name);
@@ -116,10 +117,10 @@ export class FormMetaModal extends Modal {
             });
 
         new Setting(main)
-            .setName("Заголовок")
+            .setName(t("meta.title"))
             .addText((text) =>
                 text
-                    .setPlaceholder("например, Новая книга")
+                    .setPlaceholder(t("meta.titlePlaceholder"))
                     .setValue(this.title)
                     .onChange((value) => {
                         this.title = value;
@@ -129,15 +130,15 @@ export class FormMetaModal extends Modal {
 
         const look = settingsGroup(
             contentEl,
-            "Вид в списке форм",
-            "Как форма выглядит в браузере форм. Папка — просто ярлык для группировки",
+            t("meta.lookGroup"),
+            t("meta.lookGroupDesc"),
         );
 
         new Setting(look)
-            .setName("Папка")
-            .setDesc("Пусто — без папки")
+            .setName(t("meta.folder"))
+            .setDesc(t("meta.folderDesc"))
             .addText((text) => {
-                text.setPlaceholder("например, Чтение")
+                text.setPlaceholder(t("meta.folderPlaceholder"))
                     .setValue(this.folder)
                     .onChange((value) => {
                         this.folder = value;
@@ -155,9 +156,9 @@ export class FormMetaModal extends Modal {
 
         // Значок выбирается сеткой, а не набором имени: помнить, что нужный
         // называется «clipboard-list», нельзя, а список их больше тысячи.
-        new Setting(look).setName("Значок").addButton((button) => {
+        new Setting(look).setName(t("meta.icon")).addButton((button) => {
             this.iconPreview = button.buttonEl;
-            button.setTooltip("Выбрать значок");
+            button.setTooltip(t("meta.pickIcon"));
             this.renderIconPreview();
 
             // Кнопка работает переключателем. Клик по ней всплывашку не
@@ -186,12 +187,12 @@ export class FormMetaModal extends Modal {
 
         const commandGroup = settingsGroup(
             contentEl,
-            "Команда в палитре",
-            "Команда «Заполнить: …» открывает эту форму из палитры Obsidian",
+            t("meta.commandGroup"),
+            t("meta.commandGroupDesc"),
         );
 
         new Setting(commandGroup)
-            .setName("Добавить команду")
+            .setName(t("meta.addCommand"))
             .addToggle((toggle) =>
                 toggle.setValue(this.command.enabled).onChange((value) => {
                     this.command.enabled = value;
@@ -206,9 +207,9 @@ export class FormMetaModal extends Modal {
 
         const templateGroup = settingsGroup(
             contentEl,
-            "Шаблон заметки",
-            "Вид заметки с подстановками. Пусто — используется формат выше. " +
-                "Особые: {{frontmatter}} — вся шапка разом, {{cursor}} — куда встанет курсор",
+            t("meta.templateGroup"),
+            t("meta.templateGroupDesc"),
+
         );
 
         this.renderFieldHints(templateGroup);
@@ -227,10 +228,10 @@ export class FormMetaModal extends Modal {
         this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
 
         new Setting(contentEl)
-            .addButton((button) => button.setButtonText("Отмена").onClick(() => this.close()))
+            .addButton((button) => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
             .addButton((button) =>
                 button
-                    .setButtonText(this.isEditing ? "Сохранить" : "Создать")
+                    .setButtonText(this.isEditing ? t("common.save") : t("common.create"))
                     .setCta()
                     .onClick(() => this.submit()),
             );
@@ -301,7 +302,7 @@ export class FormMetaModal extends Modal {
         container.empty();
         if (!this.command.enabled) return;
 
-        new Setting(container).setName("Что делает").addDropdown((dropdown) => {
+        new Setting(container).setName(t("meta.commandMode")).addDropdown((dropdown) => {
             for (const mode of COMMAND_MODE_ORDER) {
                 dropdown.addOption(mode, commandModeLabel(mode));
             }
@@ -316,8 +317,8 @@ export class FormMetaModal extends Modal {
         // ключам, а не собираются в текст.
         if (this.command.mode !== "update") {
             new Setting(container)
-                .setName("Формат результата")
-                .setDesc("Только если шаблон пуст")
+                .setName(t("meta.format"))
+                .setDesc(t("meta.formatDesc"))
                 .addDropdown((dropdown) => {
                     for (const format of OUTPUT_FORMAT_ORDER) {
                         dropdown.addOption(format, outputFormatLabel(format));
@@ -331,10 +332,10 @@ export class FormMetaModal extends Modal {
         if (this.command.mode !== "create") return;
 
         new Setting(container)
-            .setName("Папка для заметок")
-            .setDesc("Понимает {{поле}}: «Книги/{{genre}}». Пусто — корень хранилища")
+            .setName(t("meta.noteFolder"))
+            .setDesc(t("meta.noteFolderDesc"))
             .addText((text) => {
-                text.setPlaceholder("Корень хранилища")
+                text.setPlaceholder(t("settings.folderPlaceholder"))
                     .setValue(this.command.folder ?? "")
                     .onChange((value) => {
                         if (value.trim() === "") delete this.command.folder;
@@ -346,14 +347,14 @@ export class FormMetaModal extends Modal {
             });
 
         new Setting(container)
-            .setName("Имя заметки")
+            .setName(t("meta.noteName"))
             .setDesc(
-                "Шаблон с подстановками: «{{author}} — {{title}}». " +
-                    "Пустые поля разделителей за собой не оставят. Пусто — заголовок формы",
+                t("meta.noteNameDesc"),
+
             )
             .addText((text) =>
                 text
-                    .setPlaceholder(this.title.trim() === "" ? "Заголовок формы" : this.title)
+                    .setPlaceholder(this.title.trim() === "" ? t("meta.formTitle") : this.title)
                     .setValue(this.command.nameTemplate ?? "")
                     .onChange((value) => {
                         if (value.trim() === "") delete this.command.nameTemplate;
@@ -362,8 +363,8 @@ export class FormMetaModal extends Modal {
             );
 
         new Setting(container)
-            .setName("Куда открыть заметку")
-            .setDesc("«Не открывать» — когда заметки заводятся одна за другой")
+            .setName(t("meta.openIn"))
+            .setDesc(t("meta.openInDesc"))
             .addDropdown((dropdown) => {
                 for (const mode of OPEN_MODE_ORDER) {
                     dropdown.addOption(mode, openModeLabel(mode));
@@ -386,11 +387,11 @@ export class FormMetaModal extends Modal {
         const name = this.name.trim();
         const title = this.title.trim();
 
-        if (name === "") return this.fail("Идентификатор не может быть пустым");
+        if (name === "") return this.fail(t("meta.nameEmpty"));
         if (!isValidName(name)) {
-            return this.fail("Идентификатор — только латинские буквы, без цифр, пробелов и знаков");
+            return this.fail(t("meta.nameLatin"));
         }
-        if (this.options.isNameTaken(name)) return this.fail(`Форма «${name}» уже существует`);
+        if (this.options.isNameTaken(name)) return this.fail(t("meta.nameTaken", { name }));
 
         this.close();
         // Пустой заголовок — не ошибка: подставляем идентификатор.

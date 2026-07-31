@@ -3,7 +3,8 @@
     "name": "Modal Forms Lite",
     "version": "0.1.0",
     "minAppVersion": "1.13.0",
-    "description": "Формы для структурированного ввода данных, вызываемые откуда угодно",
+    "description": "Build forms once, then fill them in a modal to create notes, edit note properties or insert text. Speaks six languages.",
     "author": "oxill",
+    "authorUrl": "https://github.com/oxill",
     "isDesktopOnly": false
 }
