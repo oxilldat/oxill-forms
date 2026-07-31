@@ -15,5 +15,13 @@ export function settingsGroup(
 ): HTMLElement {
     const heading = new Setting(container).setName(name).setHeading();
     if (description) heading.setDesc(description);
+    return plainGroup(container);
+}
+
+/**
+ * Та же карточка, но без заголовка. Нужна там, где раздел и так понятен по
+ * содержимому, а подпись над каждой парой строк только дробила бы окно.
+ */
+export function plainGroup(container: HTMLElement): HTMLElement {
     return container.createDiv({ cls: "mfl-settings-group" });
 }

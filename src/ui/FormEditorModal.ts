@@ -96,6 +96,9 @@ export class FormEditorModal extends Modal {
         const header = block.createDiv({ cls: "mfl-field-header" });
 
         const isOpen = this.expanded.has(field);
+        // Развёрнутый блок теряет заливку: внутри лежат карточки настроек,
+        // и на одинаковом фоне они бы не читались.
+        block.toggleClass("is-open", isOpen);
         const chevron = header.createDiv({ cls: "clickable-icon" });
         setIcon(chevron, isOpen ? "chevron-down" : "chevron-right");
         chevron.addEventListener("click", () => {

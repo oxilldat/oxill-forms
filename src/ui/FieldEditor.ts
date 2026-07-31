@@ -16,7 +16,7 @@ import type {
 } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
 import { restrictToLatin } from "./restrictToLatin";
-import { settingsGroup } from "./settingsGroup";
+import { plainGroup } from "./settingsGroup";
 
 interface FieldEditorOptions {
     field: FieldDefinition;
@@ -46,7 +46,9 @@ export class FieldEditor {
     }
 
     render(container: HTMLElement): void {
-        new Setting(container).setName("Тип").addDropdown((dropdown) => {
+        // Тип живёт в своей карточке и вне перерисовываемого тела: при смене
+        // типа тело собирается заново, а список выбора должен остаться.
+        new Setting(plainGroup(container)).setName("Тип").addDropdown((dropdown) => {
             for (const [type, label] of Object.entries(INPUT_TYPE_LABELS)) {
                 // Dataview прячем, пока он не включён в настройках. Поле, уже
                 // имеющее этот тип, оставляем — иначе список показал бы не то,
@@ -199,7 +201,7 @@ export class FieldEditor {
         container.empty();
 
         const isSection = this.field.input.type === "section";
-        const main = settingsGroup(container, "Основное");
+        const main = plainGroup(container);
 
         if (!isSection) {
             new Setting(main)
@@ -261,7 +263,7 @@ export class FieldEditor {
                         }),
                 );
 
-            const behavior = settingsGroup(container, "Поведение");
+            const behavior = plainGroup(container);
 
             new Setting(behavior).setName("Обязательное").addToggle((toggle) =>
                 toggle.setValue(this.field.required === true).onChange((value) => {
@@ -286,9 +288,7 @@ export class FieldEditor {
         }
 
         // У типов без своих настроек карточку не заводим — она была бы пустой.
-        this.optionsEl = this.hasTypeOptions()
-            ? settingsGroup(container, "Настройки типа")
-            : container.createDiv();
+        this.optionsEl = this.hasTypeOptions() ? plainGroup(container) : container.createDiv();
         this.renderInputOptions();
 
         this.conditionEl = container.createDiv();
@@ -309,11 +309,7 @@ export class FieldEditor {
         const isSection = this.field.input.type === "section";
         const what = isSection ? "раздел" : "поле";
 
-        const container = settingsGroup(
-            host,
-            "Условие показа",
-            isSection ? "Скрытый раздел уносит с собой все поля до следующего раздела" : undefined,
-        );
+        const container = plainGroup(host);
 
         // Раздел не хранит значения, поэтому зависеть от него бессмысленно.
         const candidates = this.options.otherFields.filter(
@@ -330,6 +326,9 @@ export class FieldEditor {
 
         new Setting(container)
             .setName(`Показывать ${what}`)
+            // Пояснение переехало сюда из заголовка группы: заголовков в
+            // настройках поля больше нет, а знать про это правило важно.
+            .setDesc(isSection ? "Скрытый раздел уносит все поля до следующего" : "")
             .addDropdown((dropdown) => {
                 dropdown.addOption("always", "Всегда");
                 dropdown.addOption("conditional", "При условии");

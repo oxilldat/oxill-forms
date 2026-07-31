@@ -585,11 +585,17 @@
 }
 
 /* Блок поля в редакторе состава: шапка со строкой, под ней настройки. */
+/* Блок поля — рамка без заливки: внутри лежат карточки настроек, и на
+   одинаковом фоне они были бы не видны. Заливка только у свёрнутого блока,
+   где никаких карточек нет и строка должна читаться как объект. */
 .mfl-field-block {
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-m);
-    background-color: var(--background-secondary);
     overflow: hidden;
+}
+
+.mfl-field-block:not(.is-open) {
+    background-color: var(--background-secondary);
 }
 
 .mfl-field-header {
@@ -599,21 +605,21 @@
     padding: 0.45rem 0.5rem;
 }
 
+/* Настройки поля выглядят как свойства формы: те же карточки, тот же ритм.
+   Заголовков у групп здесь нет — разделов немного, и подпись над каждой
+   парой строк только дробила бы и без того вложенное окно. */
 .mfl-field-body {
-    padding: 0 0.75rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
     border-top: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
 }
 
-/* Внутри блока поля карточки групп лишние: блок сам уже карточка. */
+/* Отступ снизу карточкам не нужен: расстояние держит gap контейнера. */
 .mfl-field-body .mfl-settings-group {
-    background: none;
-    border-radius: 0;
     margin-bottom: 0;
-}
-
-.mfl-field-body .mfl-settings-group .setting-item {
-    padding-left: 0;
-    padding-right: 0;
 }
 
 .mfl-field-caption {
