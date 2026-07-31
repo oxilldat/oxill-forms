@@ -13,7 +13,7 @@ import type {
     OutputFormat,
 } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
-import { IconPickerModal } from "./IconPickerModal";
+import { IconPicker } from "./IconPicker";
 import { restrictToLatin } from "./restrictToLatin";
 import { settingsGroup } from "./settingsGroup";
 import { ValueSuggest } from "./ValueSuggest";
@@ -52,6 +52,8 @@ export class FormMetaModal extends Modal {
     private command: FormCommand;
     private template: string;
     private iconPreview: HTMLElement | null = null;
+    /** Открытая всплывашка значков. Её надо закрыть вместе с окном. */
+    private iconPicker: IconPicker | null = null;
     private readonly fields: FieldDefinition[];
     private commandEl: HTMLElement | null = null;
     private templateInput: HTMLTextAreaElement | null = null;
@@ -153,14 +155,27 @@ export class FormMetaModal extends Modal {
             button.setTooltip("Выбрать значок");
             this.renderIconPreview();
 
+            // Кнопка работает переключателем. Клик по ней всплывашку не
+            // закрывает — иначе она бы схлопнулась и тут же открылась снова,
+            // поэтому решение принимаем здесь, по сохранённой ссылке.
             button.onClick(() => {
-                new IconPickerModal(this.app, {
-                    current: this.icon === "" ? DEFAULT_FORM_ICON : this.icon,
-                    onPick: (icon) => {
+                if (this.iconPicker?.isOpen()) {
+                    this.iconPicker.close();
+                    return;
+                }
+
+                this.iconPicker = new IconPicker(
+                    button.buttonEl,
+                    this.icon === "" ? DEFAULT_FORM_ICON : this.icon,
+                    (icon) => {
                         this.icon = icon;
                         this.renderIconPreview();
                     },
-                }).open();
+                    () => {
+                        this.iconPicker = null;
+                    },
+                );
+                this.iconPicker.open();
             });
         });
 
@@ -382,6 +397,9 @@ export class FormMetaModal extends Modal {
     }
 
     onClose(): void {
+        // Всплывашка живёт внутри разметки окна и исчезнет вместе с ней, но
+        // её обработчики висят на document — снять их можно только отсюда.
+        this.iconPicker?.close();
         this.contentEl.empty();
     }
 }
