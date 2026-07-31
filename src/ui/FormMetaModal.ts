@@ -2,14 +2,19 @@ import { App, Modal, Setting, setIcon, TextComponent } from "obsidian";
 import { DEFAULT_FORM_ICON } from "../core/formFolders";
 import { isValidName } from "../core/naming";
 import {
-    COMMAND_MODE_LABELS,
-    OUTPUT_FORMAT_LABELS,
-} from "../core/types";
+    commandModeLabel,
+    COMMAND_MODE_ORDER,
+    openModeLabel,
+    OPEN_MODE_ORDER,
+    outputFormatLabel,
+    OUTPUT_FORMAT_ORDER,
+} from "../core/labels";
 import type {
     CommandMode,
     FieldDefinition,
     FormCommand,
     FormDefinition,
+    OpenMode,
     OutputFormat,
 } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
@@ -297,8 +302,8 @@ export class FormMetaModal extends Modal {
         if (!this.command.enabled) return;
 
         new Setting(container).setName("Что делает").addDropdown((dropdown) => {
-            for (const [mode, label] of Object.entries(COMMAND_MODE_LABELS)) {
-                dropdown.addOption(mode, label);
+            for (const mode of COMMAND_MODE_ORDER) {
+                dropdown.addOption(mode, commandModeLabel(mode));
             }
             dropdown.setValue(this.command.mode).onChange((value) => {
                 this.command.mode = value as CommandMode;
@@ -314,8 +319,8 @@ export class FormMetaModal extends Modal {
                 .setName("Формат результата")
                 .setDesc("Только если шаблон пуст")
                 .addDropdown((dropdown) => {
-                    for (const [format, label] of Object.entries(OUTPUT_FORMAT_LABELS)) {
-                        dropdown.addOption(format, label);
+                    for (const format of OUTPUT_FORMAT_ORDER) {
+                        dropdown.addOption(format, outputFormatLabel(format));
                     }
                     dropdown.setValue(this.command.format).onChange((value) => {
                         this.command.format = value as OutputFormat;
@@ -327,37 +332,44 @@ export class FormMetaModal extends Modal {
 
         new Setting(container)
             .setName("Папка для заметок")
-            .setDesc("Пусто — корень хранилища")
+            .setDesc("Понимает {{поле}}: «Книги/{{genre}}». Пусто — корень хранилища")
             .addText((text) => {
                 text.setPlaceholder("Корень хранилища")
                     .setValue(this.command.folder ?? "")
                     .onChange((value) => {
-                        this.command.folder = value.trim();
+                        if (value.trim() === "") delete this.command.folder;
+                        else this.command.folder = value.trim();
                     });
                 new FolderSuggest(this.app, text.inputEl, (path) => {
                     this.command.folder = path;
                 });
             });
 
-        const named = this.fields.filter((field) => !field.hidden);
-        if (named.length === 0) {
-            new Setting(container)
-                .setName("Имя заметки")
-                .setDesc("В форме ещё нет полей — имя возьмётся из заголовка формы");
-            return;
-        }
+        new Setting(container)
+            .setName("Имя заметки")
+            .setDesc(
+                "Шаблон с подстановками: «{{author}} — {{title}}». " +
+                    "Пустые поля разделителей за собой не оставят. Пусто — заголовок формы",
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder(this.title.trim() === "" ? "Заголовок формы" : this.title)
+                    .setValue(this.command.nameTemplate ?? "")
+                    .onChange((value) => {
+                        if (value.trim() === "") delete this.command.nameTemplate;
+                        else this.command.nameTemplate = value.trim();
+                    }),
+            );
 
         new Setting(container)
-            .setName("Имя заметки из поля")
-            .setDesc("Пустое — возьмём заголовок формы")
+            .setName("Куда открыть заметку")
+            .setDesc("«Не открывать» — когда заметки заводятся одна за другой")
             .addDropdown((dropdown) => {
-                dropdown.addOption("", "— заголовок формы —");
-                for (const field of named) {
-                    dropdown.addOption(field.name, field.label?.trim() || field.name);
+                for (const mode of OPEN_MODE_ORDER) {
+                    dropdown.addOption(mode, openModeLabel(mode));
                 }
-                dropdown.setValue(this.command.nameField ?? "").onChange((value) => {
-                    if (value === "") delete this.command.nameField;
-                    else this.command.nameField = value;
+                dropdown.setValue(this.command.openIn ?? "current").onChange((value) => {
+                    this.command.openIn = value as OpenMode;
                 });
             });
     }

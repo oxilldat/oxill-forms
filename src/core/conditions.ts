@@ -2,18 +2,6 @@ import type { FieldValue } from "./FormResult";
 import type { ConditionKind, FieldCondition, InputTypeName } from "./types";
 
 /** Подписи для выпадающего списка в редакторе поля. */
-export const CONDITION_LABELS: Record<ConditionKind, string> = {
-    isSet: "заполнено",
-    equals: "равно",
-    contains: "содержит",
-    startsWith: "начинается с",
-    endsWith: "заканчивается на",
-    above: "больше чем",
-    below: "меньше чем",
-    isTrue: "включено",
-    isFalse: "выключено",
-};
-
 /** Условиям без значения поле ввода не нужно. */
 export function conditionNeedsValue(kind: ConditionKind): boolean {
     return kind !== "isSet" && kind !== "isTrue" && kind !== "isFalse";

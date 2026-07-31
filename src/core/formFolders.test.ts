@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { folderExists, folderNames, formsInFolder, groupByFolder } from "./formFolders";
+import {
+    addFolder,
+    clearFolder,
+    folderExists,
+    folderNames,
+    formsInFolder,
+    groupByFolder,
+    removeFolder,
+    showsAllForms,
+} from "./formFolders";
 import type { FormDefinition } from "./types";
 
 function form(name: string, folder?: string): FormDefinition {
@@ -59,4 +68,89 @@ test("исчезнувшая папка перестаёт существова�
     assert.equal(folderExists(forms, "Работа"), true);
     assert.equal(folderExists([form("idea")], "Работа"), false);
     assert.equal(folderExists([], null), true);
+});
+
+test("созданная папка живёт и без единой формы", () => {
+    assert.deepEqual(folderNames([], ["Черновики"]), ["Черновики"]);
+    assert.deepEqual(groupByFolder([], ["Черновики"]), [{ name: "Черновики", count: 0 }]);
+    assert.equal(folderExists([], "Черновики", ["Черновики"]), true);
+    assert.equal(folderExists([], "Черновики"), false);
+});
+
+test("созданная папка не удваивается своими же формами", () => {
+    assert.deepEqual(folderNames(forms, ["Чтение", "Черновики"]), [
+        "Работа",
+        "Черновики",
+        "Чтение",
+    ]);
+});
+
+test("«без папки» остаётся выводом из форм, а не записью в списке", () => {
+    // Пустое название в списке — мусор из чужого data.json: раздел «Без
+    // папки» существует ровно тогда, когда такие формы есть.
+    assert.deepEqual(folderNames([form("idea")], [""]), []);
+    assert.equal(folderExists([form("idea")], ""), true);
+    assert.equal(folderExists([form("book", "Чтение")], ""), false);
+});
+
+test("добавление папки отсекает повтор и пустое название", () => {
+    assert.deepEqual(addFolder([], "Чтение"), ["Чтение"]);
+    assert.deepEqual(addFolder(["Чтение"], " Чтение "), ["Чтение"]);
+    assert.deepEqual(addFolder(["Чтение"], "   "), ["Чтение"]);
+});
+
+test("«Все формы» показываются всегда, пока настройка выключена", () => {
+    const tidy = [form("book", "Чтение")];
+    assert.equal(showsAllForms(tidy, [], false), true);
+    assert.equal(showsAllForms(forms, [], false), true);
+});
+
+test("«Все формы» скрываются, только когда всё разложено по папкам", () => {
+    const tidy = [form("book", "Чтение"), form("meeting", "Работа")];
+    assert.equal(showsAllForms(tidy, [], true), false);
+    // Есть форма без папки — строка нужна, иначе до формы не добраться.
+    assert.equal(showsAllForms(forms, [], true), true);
+});
+
+test("«Все формы» остаются, когда папок нет вовсе", () => {
+    // Иначе колонка слева осталась бы пустой и выбирать было бы нечего.
+    assert.equal(showsAllForms([], [], true), true);
+    assert.equal(showsAllForms([form("idea")], [], true), true);
+    // Пустая созданная папка — уже есть что выбрать.
+    assert.equal(showsAllForms([], ["Черновики"], true), false);
+});
+
+test("удаление папки снимает ярлык с её форм, но не трогает сами формы", () => {
+    const cleared = clearFolder(forms, "Чтение");
+    assert.deepEqual(
+        cleared.map((f) => [f.name, f.folder]),
+        [
+            ["book", undefined],
+            ["article", undefined],
+            ["meeting", "Работа"],
+            ["idea", undefined],
+        ],
+    );
+    // Ключа больше нет вовсе, а не лежит пустой строкой: пустое значение
+    // после разбора data.json всё равно отбрасывается.
+    assert.equal("folder" in cleared[0]!, false);
+    assert.equal(cleared.length, forms.length);
+    assert.deepEqual(folderNames(cleared), ["Работа"]);
+});
+
+test("удаление папки не задевает формы с похожим ярлыком", () => {
+    const mixed = [form("a", "Чтение"), form("b", "Чтение вслух")];
+    assert.deepEqual(
+        clearFolder(mixed, "Чтение").map((f) => f.folder),
+        [undefined, "Чтение вслух"],
+    );
+});
+
+test("папка убирается из списка, а формы остаются при своём ярлыке", () => {
+    assert.deepEqual(removeFolder(["Работа", "Чтение"], "Работа"), ["Чтение"]);
+    // Формы носят ярлык сами, поэтому непустая папка вернётся в список.
+    assert.deepEqual(folderNames(forms, removeFolder(["Чтение"], "Чтение")), [
+        "Работа",
+        "Чтение",
+    ]);
 });

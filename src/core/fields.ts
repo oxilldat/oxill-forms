@@ -22,16 +22,19 @@ export function isFieldNameTaken(
  */
 export function withSource(
     type: "select" | "multiselect",
-    source: "fixed" | "notes",
+    source: "fixed" | "notes" | "dataview",
 ): InputType {
     if (type === "select") {
+        // У одиночного выбора запроса как источника нет: для него есть
+        // отдельный тип «dataview», и второй способ сделать то же самое
+        // только запутал бы список типов.
         return source === "notes"
             ? { type: "select", source: "notes", folder: "" }
             : { type: "select", source: "fixed", options: [] };
     }
-    return source === "notes"
-        ? { type: "multiselect", source: "notes", folder: "" }
-        : { type: "multiselect", source: "fixed", options: [] };
+    if (source === "notes") return { type: "multiselect", source: "notes", folder: "" };
+    if (source === "dataview") return { type: "multiselect", source: "dataview", query: "" };
+    return { type: "multiselect", source: "fixed", options: [] };
 }
 
 /** Значения по умолчанию для каждого типа при переключении в редакторе. */
@@ -63,6 +66,46 @@ export function defaultInputFor(type: InputTypeName): InputType {
         case "section":
             return { type };
     }
+}
+
+/**
+ * Копия поля рядом с оригиналом. Имя подбирается по тем же правилам, что при
+ * создании: два поля с одним ключом — это одно значение в результате.
+ */
+export function duplicateField(fields: FieldDefinition[], index: number): FieldDefinition[] {
+    const source = fields[index];
+    if (!source) return fields;
+
+    const copy: FieldDefinition = {
+        ...structuredClone(source),
+        name: freeNameFrom((candidate) => isFieldNameTaken(fields, candidate), source.name),
+    };
+
+    const next = [...fields];
+    next.splice(index + 1, 0, copy);
+    return next;
+}
+
+/**
+ * Переставляет поле на новое место. `to` — позиция в списке ДО изъятия поля,
+ * то есть номер строки, перед которой его бросили.
+ */
+export function reorderField(
+    fields: FieldDefinition[],
+    from: number,
+    to: number,
+): FieldDefinition[] {
+    if (from < 0 || from >= fields.length) return fields;
+    if (to < 0 || to > fields.length) return fields;
+    // Бросок на своё же место и сразу под себя ничего не меняет.
+    if (to === from || to === from + 1) return fields;
+
+    const next = [...fields];
+    const [moved] = next.splice(from, 1);
+    if (!moved) return fields;
+
+    next.splice(to > from ? to - 1 : to, 0, moved);
+    return next;
 }
 
 /** Перемещает поле на `delta` позиций. Выход за границы списка игнорируется. */

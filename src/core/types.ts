@@ -1,3 +1,5 @@
+import type { Locale } from "../i18n";
+
 /**
  * Модель данных плагина. Всё, что здесь описано, сериализуется в data.json,
  * поэтому менять эти типы можно только с оглядкой на уже сохранённые формы.
@@ -18,10 +20,16 @@ export type SelectInput =
     | { type: "select"; source: "fixed"; options: SelectOption[] }
     | { type: "select"; source: "notes"; folder: string };
 
-/** Множественный выбор. Источники те же, что у одиночного. */
+/**
+ * Множественный выбор. Источники те же, что у одиночного, но заметки можно
+ * брать сразу из нескольких папок: `folder` — основная, `folders` — все
+ * остальные. Основная отдельным полем, чтобы формы, сделанные до появления
+ * списка, читались без переделки.
+ */
 export type MultiselectInput =
     | { type: "multiselect"; source: "fixed"; options: SelectOption[] }
-    | { type: "multiselect"; source: "notes"; folder: string };
+    | { type: "multiselect"; source: "notes"; folder: string; folders?: string[] }
+    | { type: "multiselect"; source: "dataview"; query: string };
 
 /** Типы, у которых значений может быть несколько. */
 export type MultiValueTypeName = "multiselect" | "tag";
@@ -45,12 +53,20 @@ export type InputType =
     | { type: "datetime" }
     | SelectInput
     | MultiselectInput
-    | { type: "tag" }
+    /** `exclude` — регулярное выражение: подходящие теги в подсказку не идут. */
+    | { type: "tag"; exclude?: string }
     | { type: "dataview"; query: string }
     | { type: "note"; folder: string }
-    | { type: "folder" }
-    | { type: "image" }
-    | { type: "file" };
+    /** `parent` — предлагать только папки внутри неё. Пусто — всё хранилище. */
+    | { type: "folder"; parent?: string }
+    /**
+     * Вложения. `folder` пустая — берётся папка из настроек плагина: общее
+     * место остаётся значением по умолчанию, а форма может отправить свои
+     * файлы в другое. `filenameTemplate` понимает `{{поле}}`; пустой —
+     * сохраняем под исходным именем.
+     */
+    | { type: "image"; folder?: string; filenameTemplate?: string }
+    | { type: "file"; folder?: string; filenameTemplate?: string; extensions?: string[] };
 
 export type InputTypeName = InputType["type"];
 
@@ -74,6 +90,24 @@ export interface FieldCondition {
     value?: string | number;
 }
 
+/**
+ * Проверки ответа. Обязательность живёт отдельно (`required`) — она про
+ * наличие ответа, а это про его содержимое, и проверяется только когда ответ
+ * есть.
+ */
+export interface FieldRules {
+    /** Число и ползунок: границы значения. */
+    min?: number;
+    max?: number;
+    /** Текст: длина. Множественный выбор и теги: количество значений. */
+    minLength?: number;
+    maxLength?: number;
+    /** Текст: регулярное выражение, которому ответ обязан соответствовать. */
+    pattern?: string;
+    /** Своё сообщение вместо сгенерированного: регэксп сам себя не объясняет. */
+    message?: string;
+}
+
 export interface FieldDefinition {
     /** Ключ в результате формы. Уникален в пределах формы. */
     name: string;
@@ -95,6 +129,8 @@ export interface FieldDefinition {
     hidden?: boolean;
     /** Если задано — поле показывается только при выполнении условия. */
     condition?: FieldCondition;
+    /** Проверки ответа. Применяются только к заполненному полю. */
+    rules?: FieldRules;
     input: InputType;
 }
 
@@ -112,29 +148,28 @@ export interface FieldRename {
 /** В каком виде команда выводит результат. */
 export type OutputFormat = "frontmatter" | "dataview" | "list";
 
-export const OUTPUT_FORMAT_LABELS: Record<OutputFormat, string> = {
-    frontmatter: "YAML в шапке заметки",
-    dataview: "Свойства (ключ:: значение)",
-    list: "Маркированный список",
-};
-
 /** Что делает команда формы. */
 export type CommandMode = "update" | "create" | "insert";
 
-export const COMMAND_MODE_LABELS: Record<CommandMode, string> = {
-    update: "Изменить шапку текущей заметки",
-    create: "Создать новую заметку",
-    insert: "Вставить текстом по месту курсора",
-};
+/** Куда открыть созданную заметку. */
+export type OpenMode = "current" | "tab" | "split" | "none";
 
 export interface FormCommand {
     enabled: boolean;
     mode: CommandMode;
     format: OutputFormat;
-    /** Режим создания: куда положить заметку. Пусто — корень хранилища. */
+    /**
+     * Режим создания: куда положить заметку. Шаблон с подстановками —
+     * «Книги/{{genre}}». Пусто — корень хранилища.
+     */
     folder?: string;
-    /** Режим создания: из какого поля взять имя файла. */
-    nameField?: string;
+    /**
+     * Режим создания: шаблон имени файла — «{{author}} — {{title}}».
+     * Пусто — берётся заголовок формы.
+     */
+    nameTemplate?: string;
+    /** Режим создания: где показать заметку после создания. */
+    openIn?: OpenMode;
 }
 
 export interface FormDefinition {
@@ -169,6 +204,34 @@ export interface FormDefinition {
 
 export interface PluginSettings {
     forms: FormDefinition[];
+    /**
+     * Папки, созданные в браузере форм. Список нужен только пустым папкам:
+     * у непустой название и так читается из самих форм. Порядок хранения не
+     * важен — в списке папки идут по алфавиту.
+     */
+    folders: string[];
+    /**
+     * Убрать строку «Все формы» из браузера, когда все формы разложены по
+     * папкам. Пока есть формы без папки, строка остаётся: иначе до них не
+     * добраться иначе как через раздел «Без папки».
+     */
+    hideAllFormsFolder: boolean;
+    /**
+     * Отдавать шаблоны заметок на обработку Templater. Пока выключено, его
+     * команды остаются в тексте как есть: чужой плагин исполняет код, и
+     * включать это молча нельзя.
+     */
+    templaterEnabled: boolean;
+    /**
+     * Имя глобальной переменной с API. Меняют его редко и по одной причине:
+     * привычное имя уже занял другой плагин или свой скрипт.
+     */
+    globalName: string;
+    /**
+     * Язык интерфейса. При установке берётся язык Obsidian, если такой
+     * словарь есть; дальше меняется только руками.
+     */
+    language: Locale;
     /** Куда складывать картинки из полей типа «Изображение». */
     imageFolder: string;
     /** Куда складывать всё остальное из полей типа «Файл». */
@@ -206,28 +269,6 @@ export interface EditorContext {
  * Человекочитаемые названия типов. Порядок ключей задаёт порядок в
  * выпадающем списке редактора, поэтому они сгруппированы по смыслу.
  */
-export const INPUT_TYPE_LABELS: Record<InputTypeName, string> = {
-    section: "Раздел",
-    text: "Текст",
-    textarea: "Многострочный текст",
-    email: "Электронная почта",
-    tel: "Телефон",
-    number: "Число",
-    slider: "Ползунок",
-    toggle: "Переключатель",
-    date: "Дата",
-    time: "Время",
-    datetime: "Дата и время",
-    select: "Выбор из списка",
-    multiselect: "Выбор нескольких",
-    tag: "Теги",
-    dataview: "Список из запроса Dataview",
-    note: "Заметка из папки",
-    folder: "Папка",
-    image: "Изображение",
-    file: "Файл",
-};
-
 /** Типы, которые ничего не спрашивают у пользователя и не дают значения. */
 export function isDecorative(type: InputTypeName): boolean {
     return type === "section";

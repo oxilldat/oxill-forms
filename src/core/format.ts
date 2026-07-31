@@ -56,9 +56,21 @@ export function renderNote(
     data: FormData,
     frontmatter: string,
 ): RenderedNote {
-    const withFrontmatter = template.replace(/\{\{\s*frontmatter\s*\}\}/g, frontmatter);
-    const rendered = renderTemplate(withFrontmatter, data);
+    return extractCursor(renderNoteText(template, data, frontmatter));
+}
 
+/**
+ * То же, но метка курсора остаётся в тексте. Нужно, когда после нас по тексту
+ * пройдёт Templater: он меняет длину текста, и посчитанное заранее смещение
+ * указывало бы не туда.
+ */
+export function renderNoteText(template: string, data: FormData, frontmatter: string): string {
+    const withFrontmatter = template.replace(/\{\{\s*frontmatter\s*\}\}/g, frontmatter);
+    return renderTemplate(withFrontmatter, data);
+}
+
+/** Вырезает метку курсора и запоминает, где она стояла. */
+export function extractCursor(rendered: string): RenderedNote {
     const match = CURSOR_TOKEN.exec(rendered);
     if (!match) return { text: rendered };
 

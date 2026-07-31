@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { defaultSettings, parseFormDefinition, parseSettings } from "./settings";
+import {
+    defaultSettings,
+    formCodeFields,
+    parseFormDefinition,
+    parseSettings,
+} from "./settings";
 
 test("мусор вместо настроек даёт значения по умолчанию", () => {
     assert.deepEqual(parseSettings(null), defaultSettings());
@@ -146,4 +151,179 @@ test("условие с неизвестным видом не сохраняе�
         ],
     });
     assert.equal(form?.fields[0]?.condition, undefined);
+});
+
+test("вложения читают свою папку, шаблон имени и расширения", () => {
+    const form = parseFormDefinition({
+        name: "book",
+        title: "Книга",
+        fields: [
+            {
+                name: "cover",
+                input: {
+                    type: "image",
+                    folder: " Обложки ",
+                    filenameTemplate: " {{title}} ",
+                },
+            },
+            {
+                name: "scan",
+                input: { type: "file", extensions: [".PDF", "djvu", "pdf"] },
+            },
+        ],
+    });
+
+    assert.deepEqual(form?.fields[0]?.input, {
+        type: "image",
+        folder: "Обложки",
+        filenameTemplate: "{{title}}",
+    });
+    assert.deepEqual(form?.fields[1]?.input, {
+        type: "file",
+        extensions: ["pdf", "djvu"],
+    });
+});
+
+test("пустая папка и пустой шаблон у вложения не сохраняются", () => {
+    // Отсутствие ключа означает «как в настройках плагина», а пустая строка
+    // читалась бы как корень хранилища — это разные вещи.
+    const form = parseFormDefinition({
+        name: "book",
+        title: "Книга",
+        fields: [{ name: "scan", input: { type: "file", folder: "  ", filenameTemplate: "" } }],
+    });
+    assert.deepEqual(form?.fields[0]?.input, { type: "file" });
+});
+
+test("множественный выбор заметок читает дополнительные папки", () => {
+    const form = parseFormDefinition({
+        name: "meeting",
+        title: "Встреча",
+        fields: [
+            {
+                name: "people",
+                input: {
+                    type: "multiselect",
+                    source: "notes",
+                    folder: "Люди",
+                    folders: ["Команда", " Люди ", "Команда", ""],
+                },
+            },
+        ],
+    });
+
+    // Повтор основной папки и повтор внутри списка отбрасываются: иначе
+    // каждая заметка попала бы в список выбора дважды.
+    assert.deepEqual(form?.fields[0]?.input, {
+        type: "multiselect",
+        source: "notes",
+        folder: "Люди",
+        folders: ["Команда"],
+    });
+});
+
+test("одиночный выбор заметок дополнительных папок не заводит", () => {
+    const form = parseFormDefinition({
+        name: "book",
+        title: "Книга",
+        fields: [
+            {
+                name: "author",
+                input: { type: "select", source: "notes", folder: "Люди", folders: ["Команда"] },
+            },
+        ],
+    });
+    assert.deepEqual(form?.fields[0]?.input, { type: "select", source: "notes", folder: "Люди" });
+});
+
+test("простые типы читаются как есть, а не проваливаются в соседнюю ветку", () => {
+    // Регрессия: у тега появились свои настройки, и типы без настроек
+    // какое-то время доставались из разбора тегом.
+    const simple = ["text", "textarea", "email", "tel", "number", "toggle", "date", "time"];
+    for (const type of simple) {
+        const form = parseFormDefinition({
+            name: "book",
+            title: "Книга",
+            fields: [{ name: "value", input: { type } }],
+        });
+        assert.deepEqual(form?.fields[0]?.input, { type });
+    }
+});
+
+test("у тега сохраняется выражение отбора, у папки — родитель", () => {
+    const form = parseFormDefinition({
+        name: "book",
+        title: "Книга",
+        fields: [
+            { name: "tags", input: { type: "tag", exclude: " ^archive/ " } },
+            { name: "where", input: { type: "folder", parent: "Проекты" } },
+            { name: "plain", input: { type: "tag", exclude: "  " } },
+        ],
+    });
+
+    assert.deepEqual(form?.fields[0]?.input, { type: "tag", exclude: "^archive/" });
+    assert.deepEqual(form?.fields[1]?.input, { type: "folder", parent: "Проекты" });
+    assert.deepEqual(form?.fields[2]?.input, { type: "tag" });
+});
+
+test("запрос источником бывает только у множественного выбора", () => {
+    const multi = parseFormDefinition({
+        name: "a",
+        title: "a",
+        fields: [
+            { name: "x", input: { type: "multiselect", source: "dataview", query: "dv.pages()" } },
+        ],
+    });
+    assert.deepEqual(multi?.fields[0]?.input, {
+        type: "multiselect",
+        source: "dataview",
+        query: "dv.pages()",
+    });
+
+    // У одиночного выбора такого источника нет: для запроса есть свой тип.
+    const single = parseFormDefinition({
+        name: "a",
+        title: "a",
+        fields: [
+            { name: "x", input: { type: "select", source: "dataview", query: "dv.pages()" } },
+        ],
+    });
+    assert.deepEqual(single?.fields[0]?.input, { type: "select", source: "fixed", options: [] });
+});
+
+test("запрос множественного выбора попадает в предупреждение при импорте", () => {
+    const form = parseFormDefinition({
+        name: "a",
+        title: "a",
+        fields: [
+            {
+                name: "people",
+                label: "Участники",
+                input: { type: "multiselect", source: "dataview", query: "dv.pages()" },
+            },
+        ],
+    });
+    assert.deepEqual(formCodeFields(form!), [{ field: "Участники", query: "dv.pages()" }]);
+});
+
+test("негодное имя глобальной переменной заменяется привычным", () => {
+    assert.equal(parseSettings({ globalName: "Forms" }).globalName, "Forms");
+    assert.equal(parseSettings({ globalName: "$mf_2" }).globalName, "$mf_2");
+    // С цифры, с дефисом и пустое — не имена переменных.
+    assert.equal(parseSettings({ globalName: "2mf" }).globalName, "MFL");
+    assert.equal(parseSettings({ globalName: "modal-forms" }).globalName, "MFL");
+    assert.equal(parseSettings({ globalName: "" }).globalName, "MFL");
+});
+
+test("язык читается только из известных словарей", () => {
+    assert.equal(parseSettings({ language: "de" }).language, "de");
+    assert.equal(parseSettings({ language: "zh" }).language, "zh");
+    // Языка, которого у нас нет, и мусора быть не должно: подставляем
+    // английский — он есть всегда.
+    assert.equal(parseSettings({ language: "it" }).language, "en");
+    assert.equal(parseSettings({ language: "auto" }).language, "en");
+    assert.equal(parseSettings({ language: 7 }).language, "en");
+    // Отсутствие значения — это первая установка: настоящий язык подберёт
+    // плагин при запуске, разбор про Obsidian ничего не знает.
+    assert.equal(parseSettings({}).language, "en");
 });

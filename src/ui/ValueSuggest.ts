@@ -9,7 +9,8 @@ export class ValueSuggest extends AbstractInputSuggest<SelectOption> {
     constructor(
         app: App,
         textInputEl: HTMLInputElement,
-        private source: () => SelectOption[],
+        /** Может считаться на месте: список из запроса Dataview заранее неизвестен. */
+        private source: () => SelectOption[] | Promise<SelectOption[]>,
         onChoose: (value: string) => void,
     ) {
         super(app, textInputEl);
@@ -21,9 +22,10 @@ export class ValueSuggest extends AbstractInputSuggest<SelectOption> {
         });
     }
 
-    protected getSuggestions(query: string): SelectOption[] {
+    protected async getSuggestions(query: string): Promise<SelectOption[]> {
         const search = query.toLowerCase();
-        return this.source().filter(
+        const options = await this.source();
+        return options.filter(
             (option) =>
                 option.label.toLowerCase().includes(search) ||
                 option.value.toLowerCase().includes(search),

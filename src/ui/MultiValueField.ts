@@ -2,12 +2,19 @@ import { App, setIcon } from "obsidian";
 import type { SelectOption } from "../core/types";
 import { ValueSuggest } from "./ValueSuggest";
 
+/**
+ * Источник вариантов. Список — когда он известен заранее; функция — когда
+ * его нужно считать (запрос Dataview зависит от других полей формы и от
+ * хранилища, поэтому спрашиваем его в момент показа подсказки).
+ */
+export type MultiValueSource = SelectOption[] | (() => Promise<SelectOption[]>);
+
 interface MultiValueOptions {
     app: App;
     container: HTMLElement;
     initial: string[];
     /** Все возможные варианты. Уже выбранные отфильтруются сами. */
-    candidates: SelectOption[];
+    candidates: MultiValueSource;
     /** Разрешить значения, которых нет в списке. Нужно тегам. */
     allowNew: boolean;
     onChange: (values: string[]) => void;
@@ -21,9 +28,16 @@ interface MultiValueOptions {
 export class MultiValueField {
     private values: string[];
     private chipsEl: HTMLElement;
+    /**
+     * Последний известный список вариантов. У вычисляемого источника он
+     * нужен для двух вещей: подписи на метке и проверки «такое значение
+     * вообще есть» — обе случаются между показами подсказки.
+     */
+    private known: SelectOption[];
 
     constructor(private options: MultiValueOptions) {
         this.values = [...options.initial];
+        this.known = Array.isArray(options.candidates) ? options.candidates : [];
 
         const root = options.container.createDiv({ cls: "mfl-multi" });
         this.chipsEl = root.createDiv({ cls: "mfl-chips" });
@@ -55,19 +69,21 @@ export class MultiValueField {
         this.renderChips();
     }
 
-    private available(): SelectOption[] {
-        return this.options.candidates.filter((option) => !this.values.includes(option.value));
+    private async available(): Promise<SelectOption[]> {
+        const source = this.options.candidates;
+        this.known = Array.isArray(source) ? source : await source();
+        return this.known.filter((option) => !this.values.includes(option.value));
     }
 
     private labelFor(value: string): string {
-        return this.options.candidates.find((option) => option.value === value)?.label ?? value;
+        return this.known.find((option) => option.value === value)?.label ?? value;
     }
 
     private add(raw: string): void {
         const value = raw.trim();
         if (value === "" || this.values.includes(value)) return;
 
-        const known = this.options.candidates.some((option) => option.value === value);
+        const known = this.known.some((option) => option.value === value);
         if (!known && !this.options.allowNew) return;
 
         this.values.push(value);

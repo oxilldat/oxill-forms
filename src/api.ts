@@ -1,4 +1,6 @@
 import { App, TFile } from "obsidian";
+import { builder } from "./core/builder";
+import type { FormBuilder } from "./core/builder";
 import { isDataviewAvailable } from "./core/dataview";
 import { defaultValues } from "./core/defaults";
 import { findForm } from "./core/forms";
@@ -29,6 +31,22 @@ export class ModalFormsApi {
         private app: App,
         private getSettings: () => PluginSettings,
     ) {}
+
+    /**
+     * Сборка формы кодом — для форм, которые живут в скрипте, а не в
+     * настройках. Результат `build()` принимает `openForm`.
+     *
+     * ```js
+     * const form = MFL.builder("book", "Новая книга")
+     *     .text({ name: "title", label: "Название", required: true })
+     *     .slider({ name: "rating", label: "Оценка", min: 1, max: 5 })
+     *     .build();
+     * const result = await MFL.openForm(form);
+     * ```
+     */
+    builder(name: string, title = ""): FormBuilder {
+        return builder(name, title);
+    }
 
     /** Идентификаторы всех сохранённых форм. */
     listForms(): string[] {

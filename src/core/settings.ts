@@ -1,19 +1,34 @@
+import { parseExtensions } from "./extensions";
+import { isLocale } from "../i18n";
+import { isValidGlobalName } from "./naming";
 import type {
     CommandMode,
     ConditionKind,
     FieldCondition,
     FieldDefinition,
     FieldRename,
+    FieldRules,
     FormCommand,
     FormDefinition,
     InputType,
+    OpenMode,
     OutputFormat,
     PluginSettings,
 } from "./types";
 
+/** Имя глобальной переменной по умолчанию: window.MFL. */
+export const DEFAULT_GLOBAL_NAME = "MFL";
+
 export function defaultSettings(): PluginSettings {
     return {
         forms: [],
+        folders: [],
+        hideAllFormsFolder: false,
+        templaterEnabled: false,
+        globalName: DEFAULT_GLOBAL_NAME,
+        // Настоящий язык подбирается при первом запуске, здесь только
+        // безопасное значение на случай, если подобрать не удастся.
+        language: "en",
         // Пустой путь означает корень хранилища. Навязывать свою структуру
         // папок не хотим — пусть решает владелец хранилища.
         imageFolder: "",
@@ -55,10 +70,29 @@ export function parseSettings(raw: unknown): PluginSettings {
         }
     }
 
+    // Пустые названия и повторы отбрасываем: они дали бы в списке папок
+    // либо безымянную строку, либо две одинаковые.
+    const folders: string[] = [];
+    if (Array.isArray(raw.folders)) {
+        for (const candidate of raw.folders) {
+            const folder = asString(candidate).trim();
+            if (folder !== "" && !folders.includes(folder)) folders.push(folder);
+        }
+    }
+
     return {
         forms,
+        folders,
         imageFolder: asString(raw.imageFolder, defaults.imageFolder),
         fileFolder: asString(raw.fileFolder, defaults.fileFolder),
+        hideAllFormsFolder: raw.hideAllFormsFolder === true,
+        templaterEnabled: raw.templaterEnabled === true,
+        // Негодное имя молча заменяем привычным: без переменной API не достать
+        // ниоткуда, а data.json могли поправить руками.
+        globalName: isValidGlobalName(asString(raw.globalName))
+            ? asString(raw.globalName)
+            : DEFAULT_GLOBAL_NAME,
+        language: isLocale(raw.language) ? raw.language : "en",
         skipDiscardConfirm: raw.skipDiscardConfirm === true,
         dataviewEnabled: raw.dataviewEnabled === true,
         autoUpdateNotes: raw.autoUpdateNotes === true,
@@ -75,11 +109,20 @@ export function parseFormDefinition(raw: unknown): FormDefinition | null {
 
 /** Есть ли в форме поля, исполняющие код. Нужно предупредить при импорте. */
 export function formCodeFields(form: FormDefinition): { field: string; query: string }[] {
-    return form.fields.flatMap((field) =>
-        field.input.type === "dataview"
-            ? [{ field: field.label?.trim() || field.name, query: field.input.query }]
-            : [],
-    );
+    return form.fields.flatMap((field) => {
+        const input = field.input;
+        // Запрос бывает и у множественного выбора: он исполняет тот же код,
+        // и умолчать о нём при импорте чужой формы нельзя.
+        const query =
+            input.type === "dataview"
+                ? input.query
+                : input.type === "multiselect" && input.source === "dataview"
+                  ? input.query
+                  : null;
+
+        if (query === null) return [];
+        return [{ field: field.label?.trim() || field.name, query }];
+    });
 }
 
 function parseForm(raw: unknown): FormDefinition | null {
@@ -138,10 +181,23 @@ function parseCommand(raw: unknown): FormCommand | null {
     const folder = asString(raw.folder).trim();
     if (folder !== "") command.folder = folder;
 
-    const nameField = asString(raw.nameField).trim();
-    if (nameField !== "") command.nameField = nameField;
+    const nameTemplate = asString(raw.nameTemplate).trim();
+    if (nameTemplate !== "") {
+        command.nameTemplate = nameTemplate;
+    } else {
+        // Раньше имя задавалось выбором одного поля. Тот же смысл выражается
+        // шаблоном из одной подстановки, поэтому переносим молча.
+        const nameField = asString(raw.nameField).trim();
+        if (nameField !== "") command.nameTemplate = `{{${nameField}}}`;
+    }
+
+    if (isOpenMode(raw.openIn)) command.openIn = raw.openIn;
 
     return command;
+}
+
+function isOpenMode(value: unknown): value is OpenMode {
+    return value === "current" || value === "tab" || value === "split" || value === "none";
 }
 
 function isCommandMode(value: unknown): value is CommandMode {
@@ -182,7 +238,29 @@ function parseField(raw: unknown): FieldDefinition | null {
     const condition = parseCondition(raw.condition);
     if (condition) field.condition = condition;
 
+    const rules = parseRules(raw.rules);
+    if (rules) field.rules = rules;
+
     return field;
+}
+
+function parseRules(raw: unknown): FieldRules | null {
+    if (!isRecord(raw)) return null;
+
+    const rules: FieldRules = {};
+    for (const key of ["min", "max", "minLength", "maxLength"] as const) {
+        const value = raw[key];
+        if (typeof value === "number" && Number.isFinite(value)) rules[key] = value;
+    }
+
+    const pattern = asString(raw.pattern).trim();
+    if (pattern !== "") rules.pattern = pattern;
+
+    const message = asString(raw.message).trim();
+    if (message !== "") rules.message = message;
+
+    // Пустой объект правил хранить незачем — это то же самое, что их нет.
+    return Object.keys(rules).length === 0 ? null : rules;
 }
 
 function parseCondition(raw: unknown): FieldCondition | null {
@@ -227,11 +305,42 @@ function parseInput(raw: Record<string, unknown>): InputType | null {
         case "date":
         case "time":
         case "datetime":
-        case "tag":
-        case "folder":
-        case "image":
-        case "file":
+            // Своих настроек у этих типов нет — одного имени типа достаточно.
             return { type: raw.type };
+
+        case "tag": {
+            const input: InputType = { type: "tag" };
+            const exclude = asString(raw.exclude).trim();
+            if (exclude !== "") input.exclude = exclude;
+            return input;
+        }
+
+        case "folder": {
+            const input: InputType = { type: "folder" };
+            const parent = asString(raw.parent).trim();
+            if (parent !== "") input.parent = parent;
+            return input;
+        }
+
+        case "image":
+        case "file": {
+            const input: InputType =
+                raw.type === "image" ? { type: "image" } : { type: "file" };
+
+            // Пустая папка и пустой шаблон означают «как в настройках» и «как
+            // назывался файл» — храним их отсутствием ключа, а не пустышкой.
+            const folder = asString(raw.folder).trim();
+            if (folder !== "") input.folder = folder;
+
+            const filenameTemplate = asString(raw.filenameTemplate).trim();
+            if (filenameTemplate !== "") input.filenameTemplate = filenameTemplate;
+
+            if (input.type === "file") {
+                const extensions = parseExtensions(raw.extensions);
+                if (extensions.length > 0) input.extensions = extensions;
+            }
+            return input;
+        }
 
         case "note":
             return { type: "note", folder: asString(raw.folder) };
@@ -249,8 +358,34 @@ function parseInput(raw: Record<string, unknown>): InputType | null {
         case "select":
         case "multiselect": {
             const kind = raw.type;
+
+            // Запрос как источник бывает только у множественного выбора: у
+            // одиночного для этого есть свой тип «dataview».
+            if (kind === "multiselect" && raw.source === "dataview") {
+                return { type: kind, source: "dataview", query: asString(raw.query) };
+            }
+
             if (raw.source === "notes") {
-                return { type: kind, source: "notes", folder: asString(raw.folder) };
+                if (kind === "select") {
+                    return { type: kind, source: "notes", folder: asString(raw.folder) };
+                }
+
+                // Повторы и пустые строки отбрасываем: одна и та же папка
+                // дважды дала бы каждую заметку дважды.
+                const folder = asString(raw.folder).trim();
+                const extra: string[] = [];
+                if (Array.isArray(raw.folders)) {
+                    for (const candidate of raw.folders) {
+                        const path = asString(candidate).trim();
+                        if (path !== "" && path !== folder && !extra.includes(path)) {
+                            extra.push(path);
+                        }
+                    }
+                }
+
+                const input: InputType = { type: kind, source: "notes", folder };
+                if (extra.length > 0) input.folders = extra;
+                return input;
             }
             // Формы, созданные до появления `source`, были списком значений.
             const rawOptions = Array.isArray(raw.options) ? raw.options : [];

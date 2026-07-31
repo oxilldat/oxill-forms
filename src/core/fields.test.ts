@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createField, defaultInputFor, moveField, removeFieldAt, validateField } from "./fields";
+import {
+    createField,
+    defaultInputFor,
+    duplicateField,
+    moveField,
+    removeFieldAt,
+    reorderField,
+    validateField,
+} from "./fields";
 import type { FieldDefinition } from "./types";
 
 function field(name: string, extra: Partial<FieldDefinition> = {}): FieldDefinition {
@@ -95,4 +103,32 @@ test("границы ползунка проверяются", () => {
     assert.ok(slider(10, 0, 1), "минимум больше максимума");
     assert.ok(slider(0, 10, 0), "нулевой шаг");
     assert.ok(slider(0, 10, 50), "шаг больше диапазона");
+});
+
+test("копия поля встаёт рядом и получает свободное имя", () => {
+    const fields = [field("title"), field("author")];
+    const next = duplicateField(fields, 0);
+
+    assert.deepEqual(next.map((f) => f.name), ["title", "titleA", "author"]);
+    // Копия независима: правка одной не должна менять другую.
+    assert.notEqual(next[0], next[1]);
+});
+
+test("перестановка считает позицию до изъятия поля", () => {
+    const fields = [field("a"), field("b"), field("c")];
+    const names = (list: typeof fields): string[] => list.map((f) => f.name);
+
+    // «Бросили перед c» — то есть на позицию 2 в исходном списке.
+    assert.deepEqual(names(reorderField(fields, 0, 2)), ["b", "a", "c"]);
+    // «Бросили в самый конец».
+    assert.deepEqual(names(reorderField(fields, 0, 3)), ["b", "c", "a"]);
+    // Снизу вверх.
+    assert.deepEqual(names(reorderField(fields, 2, 0)), ["c", "a", "b"]);
+});
+
+test("бросок на своё же место ничего не меняет", () => {
+    const fields = [field("a"), field("b")];
+    assert.equal(reorderField(fields, 0, 0), fields);
+    assert.equal(reorderField(fields, 0, 1), fields);
+    assert.equal(reorderField(fields, 5, 0), fields);
 });

@@ -34,19 +34,45 @@
     flex: 0 0 12rem;
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
-    overflow-y: auto;
+    min-height: 0;
     padding-right: 0.5rem;
     border-right: 1px solid var(--background-modifier-border);
 }
 
+/* Шапка колонки: подпись и кнопка новой папки. Прокручивается только
+   список под ней — кнопка нужна на месте всегда. */
+.mfl-folders-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 0.25rem 0.35rem 0.5rem;
+}
+
+.mfl-folders-title {
+    flex: 1;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.mfl-folders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow-y: auto;
+}
+
 .mfl-folder {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.4rem;
     padding: 0.35rem 0.5rem;
     border-radius: var(--radius-s);
     cursor: pointer;
+    /* Рамка цели перетаскивания рисуется поверх, а не раздвигает список. */
+    box-shadow: inset 0 0 0 0 transparent;
 }
 
 .mfl-folder:hover {
@@ -55,6 +81,59 @@
 
 .mfl-folder.is-active {
     background-color: var(--background-modifier-active-hover);
+}
+
+/* Крестик у пустой папки подменяет собой счётчик, а не встаёт рядом: в
+   потоке он сдвигал бы счётчик влево, и ноль пустой папки стоял бы не на
+   той же правой оси, что остальные числа. Размер задан явно — со своими
+   отступами кнопка была бы выше строки списка. */
+.mfl-folder-forget {
+    position: absolute;
+    right: 0.4rem;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+}
+
+.mfl-folder-forget .svg-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.mfl-folder:hover .mfl-folder-forget {
+    opacity: 1;
+}
+
+.mfl-folder.is-forgettable:hover .mfl-folder-count {
+    opacity: 0;
+}
+
+/* Строка ввода названия новой папки: та же строка списка, только с полем
+   вместо подписи — чтобы папка появлялась там же, где потом будет жить. */
+.mfl-folder-new {
+    cursor: default;
+}
+
+/* Селектор двухчастный не для красоты: обычному полю ввода движок задаёт
+   рамку, фон и высоту правилом с весом (0,1,1) — одного класса не хватает.
+   Поле должно быть неотличимо от подписи папки, иначе строка ввода прыгает
+   по высоте относительно соседних. */
+.mfl-folder .mfl-folder-input {
+    flex: 1;
+    min-width: 0;
+    height: auto;
+    padding: 0 0.15rem;
+    border: none;
+    background: none;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.mfl-folder .mfl-folder-input:focus {
+    box-shadow: none;
 }
 
 .mfl-folder-icon {
@@ -98,6 +177,29 @@
 
 .mfl-card:hover {
     border-color: var(--background-modifier-border-hover);
+}
+
+/* === Перетаскивание форм по папкам === */
+
+.mfl-card[draggable="true"] {
+    cursor: grab;
+}
+
+/* Карточку под курсором приглушаем, а не прячем: место в списке должно
+   остаться, иначе список дёргается на каждое движение мыши. */
+.mfl-card.is-dragging {
+    opacity: 0.4;
+}
+
+/* Цель подсвечиваем акцентом: рамкой внутрь, чтобы ничего не сдвинулось. */
+.mfl-folder.is-drop-target {
+    background-color: var(--background-modifier-hover);
+    box-shadow: inset 0 0 0 2px var(--interactive-accent);
+}
+
+.mfl-cards.is-drop-target {
+    border-radius: var(--radius-m);
+    box-shadow: inset 0 0 0 2px var(--interactive-accent);
 }
 
 .mfl-card-head {
@@ -317,74 +419,54 @@
 
 /* === Свойства формы ===
 
-   Раскладка строк остаётся двухколоночной. Меняется пропорция: управление
-   получает половину ширины вместо трети, иначе поле ввода вырождается в
-   полоску, куда не влезает даже подсказка. Длинные пояснения при этом
-   перенесены к заголовкам групп — там им доступна вся ширина окна. */
+   Раскладка строк остаётся двухколоночной. Длинные пояснения перенесены к
+   заголовкам групп — там им доступна вся ширина окна. Переопределений ширины
+   контролов здесь нет намеренно: поля и списки в окне должны быть той же
+   ширины, что во вкладке настроек. */
 
 .mfl-meta-modal {
     width: min(680px, 92vw);
 }
 
-/* Переопределений ширины контролов здесь нет намеренно: поля и списки в окне
-   должны быть той же ширины, что во вкладке настроек. Отдельная пропорция для
-   модалки как раз и растягивала их в полоску.
-
-   Отличается только вертикальный ритм строк: над и под разделителем по 12px,
-   как в настройках eternal homepage.
-
-   Паддинг задаём ВСЕМИ четырьмя сторонами сразу, а не только вертикаль. Если
-   переопределить лишь top/bottom, горизонтальные отступы остаются на базовом
-   правиле — а в модалке оно проигрывает, и текст липнет к краям. Полный
-   шортхенд в правиле с бОльшим приоритетом забирает все стороны себе.
-
-   `!important` здесь вынужденно: тема хранилища перекрывает `.setting-item`
-   в модалках правилом того же веса и выигрывает по порядку. Без !important
-   отступы в этом окне не удержать. Значения фиксированные, без переменной —
-   чтобы вид не зависел ни от чего внешнего. */
-.mfl-meta-modal .mfl-settings-group .setting-item {
-    padding: 12px 16px !important;
-}
-
-/* === Вкладка настроек: группы-карточки ===
+/* === Группы настроек: карточки ===
 
    Заголовок раздела стоит снаружи карточки, строки настроек — внутри неё.
-   Карточку рисует сама группа, а у строк фон и скругления снимаются: иначе
-   вид зависел бы от того, что текущая тема делает с отдельными строками. */
+   Разметку рисует Obsidian: `.setting-group` с вложенным `.setting-items`
+   (см. settingsGroup.ts). Своя карточка тут не держится — в модалках движок
+   правилом весом (0,4,0) сносит строкам боковые отступы, а всё, что лежит
+   внутри `.setting-group`, из-под этого правила выведено им самим.
 
-/* Отступ карточки задан переменной: по нему же выравниваются заголовок
-   группы снаружи и всё, что положено в карточку не строкой настроек. */
-.mfl-modal,
-.vertical-tab-content {
-    --mfl-card-pad: 16px;
-}
+   Поэтому здесь не переопределяют отступы, а задают переменные, по которым
+   их считает движок. По ним же он выравнивает заголовок снаружи карточки,
+   так что текст внутри и снаружи стоит на одной вертикали. */
 
 .mfl-settings-group {
-    background-color: var(--background-secondary);
-    border-radius: 12px;
-    /* Зазор между секциями задаёт отступ следующего заголовка, а не карточка:
-       иначе он складывался бы из двух чисел и его нельзя было бы держать. */
-    margin-bottom: 0;
-    overflow: hidden;
+    --setting-items-background: var(--background-secondary);
+    --setting-items-padding-x: 16px;
+    --setting-items-padding-y: 14px;
+    --setting-items-radius: 12px;
+    /* Разделитель движок рисует сам, с отступом от краёв карточки. */
+    --setting-items-divider-width: 1px;
+    --setting-items-border-width: 0;
+}
+
+/* Зазор между секциями: у Obsidian между группами 24px, нам нужен воздух. */
+.mfl-settings-group + .mfl-settings-group {
+    margin-top: 32px;
+}
+
+/* Заголовок читается как подпись своей карточки и стоит к ней ближе, чем
+   к предыдущей секции. */
+.mfl-settings-group .setting-item-heading {
+    margin-bottom: 8px;
 }
 
 .mfl-settings-group .setting-item {
-    background: none;
-    border: none;
-    border-radius: 0;
-    margin: 0;
-    padding: 14px var(--mfl-card-pad, 16px);
-    display: flex;
     /* Ключевое: при описании в две строки строка растёт симметрично, а
        контрол остаётся по центру. При flex-start он прилипал бы к верху. */
     align-items: center;
     justify-content: space-between;
     gap: 24px;
-    border-top: 1px solid var(--background-modifier-border);
-}
-
-.mfl-settings-group .setting-item:first-child {
-    border-top: none;
 }
 
 .mfl-settings-group .setting-item-info {
@@ -415,41 +497,26 @@
     width: auto;
 }
 
-/* Своих отступов у карточки нет — они есть только у строк настроек. Поэтому
-   всё, что положено в карточку напрямую, повторяет те же отступы, иначе
-   прижималось бы к самому краю и не выравнивалось ни с чем. */
-.mfl-settings-group > .mfl-hints {
-    padding: 14px var(--mfl-card-pad, 16px) 0;
+/* Отступы есть только у строк настроек. Поэтому всё, что положено в карточку
+   напрямую, повторяет те же отступы, иначе прижималось бы к самому краю и не
+   выравнивалось ни с чем. */
+.mfl-settings-group .mfl-hints {
+    padding: 14px var(--setting-items-padding-x) 0;
 }
 
-.mfl-settings-group > .mfl-hints + .setting-item {
-    border-top: none;
+/* Разделитель движок рисует у каждой строки сверху. Строке под плашками он
+   не нужен: подстановки и поле шаблона — одна мысль. */
+.mfl-settings-group .setting-items .mfl-hints + .setting-item::before {
+    content: none;
 }
 
 /* Поле шаблона лежит в карточке напрямую, без строки настроек: подписи у
    него нет, и половина ширины под неё не нужна. */
-.mfl-settings-group > .mfl-template-input {
+.mfl-settings-group .mfl-template-input {
     display: block;
-    width: calc(100% - var(--mfl-card-pad, 16px) * 2);
-    margin: 0.5rem var(--mfl-card-pad, 16px) var(--mfl-card-pad, 16px);
+    width: calc(100% - var(--setting-items-padding-x) * 2);
+    margin: 0.5rem var(--setting-items-padding-x) var(--setting-items-padding-x);
     resize: vertical;
-}
-
-/* Заголовок стоит над своей карточкой и читается как её подпись: снизу
-   почти вплотную к карточке, сверху — зазор между секциями (32px).
-
-   Горизонтальный отступ тот же, что у строк внутри карточки: заголовок,
-   его пояснение и содержимое карточки стоят на одной вертикали. */
-.setting-item.setting-item-heading {
-    border-top: none;
-    padding: 0 var(--mfl-card-pad, 16px) 8px;
-    margin: 32px 0 0;
-}
-
-.mfl-modal .setting-item.setting-item-heading:first-child,
-.vertical-tab-content .setting-item.setting-item-heading:first-child,
-.mfl-settings-group .setting-item.setting-item-heading {
-    margin-top: 0;
 }
 
 .mfl-setting-disabled .setting-item-name {
@@ -605,21 +672,76 @@
     padding: 0.45rem 0.5rem;
 }
 
+/* Ручка перетаскивания. Тащим только за неё: развёрнутое поле занимает
+   пол-окна, и перетаскивание всего блока мешало бы кликать по настройкам. */
+.mfl-field-handle {
+    display: flex;
+    align-items: center;
+    color: var(--text-faint);
+    cursor: grab;
+}
+
+.mfl-field-handle:hover {
+    color: var(--text-muted);
+}
+
+.mfl-field-block.is-dragging {
+    opacity: 0.4;
+}
+
+/* Место броска показываем полосой поверх стыка: вставлять реальный отступ
+   значило бы дёргать список на каждое движение мыши. */
+.mfl-field-block.is-drop-before,
+.mfl-field-block.is-drop-after {
+    position: relative;
+}
+
+.mfl-field-block.is-drop-before::after,
+.mfl-field-block.is-drop-after::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--interactive-accent);
+    pointer-events: none;
+}
+
+.mfl-field-block.is-drop-before::after {
+    top: -1px;
+}
+
+.mfl-field-block.is-drop-after::after {
+    bottom: -1px;
+}
+
 /* Настройки поля выглядят как свойства формы: те же карточки, тот же ритм.
    Заголовков у групп здесь нет — разделов немного, и подпись над каждой
    парой строк только дробила бы и без того вложенное окно. */
-.mfl-field-body {
+/* Тело поля и его перерисовываемые обёртки — одна стопка карточек: зазор
+   держит gap, а не отступы самих карточек, иначе на стыке обёрток он
+   складывался бы из двух чисел. */
+.mfl-field-body,
+.mfl-stack {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+.mfl-field-body {
     padding: 12px;
     border-top: 1px solid var(--background-modifier-border);
     background-color: var(--background-primary);
 }
 
-/* Отступ снизу карточкам не нужен: расстояние держит gap контейнера. */
-.mfl-field-body .mfl-settings-group {
-    margin-bottom: 0;
+/* Пустая обёртка (условие показа у скрытого поля) не должна давать зазор. */
+.mfl-stack:empty {
+    display: none;
+}
+
+.mfl-field-body .mfl-settings-group + .mfl-settings-group,
+.mfl-stack .mfl-settings-group + .mfl-settings-group {
+    margin-top: 0;
 }
 
 .mfl-field-caption {
@@ -636,9 +758,19 @@
     font-size: var(--font-ui-smaller);
 }
 
-.mfl-options .setting-item {
-    border-top: none;
-    padding: 0.25rem 0;
+/* Варианты списка идут плотнее обычных строк — их бывает много, — но по
+   боковым отступам стоят на общей вертикали карточки. Разделитель между
+   ними лишний: это один список, а не разные настройки. */
+/* Селектор трёхчастный не для красоты: отступы строкам задаёт правило
+   движка `.setting-group .setting-item:not(...)` весом (0,3,0), и перебить
+   его можно только таким же весом. */
+.mfl-settings-group .mfl-options .setting-item {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.mfl-settings-group .mfl-options .setting-item::before {
+    content: none;
 }
 
 .mfl-warning {

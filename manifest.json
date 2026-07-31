@@ -2,7 +2,7 @@
     "id": "modal-forms-lite",
     "name": "Modal Forms Lite",
     "version": "0.1.0",
-    "minAppVersion": "1.6.6",
+    "minAppVersion": "1.13.0",
     "description": "Формы для структурированного ввода данных, вызываемые откуда угодно",
     "author": "oxill",
     "isDesktopOnly": false

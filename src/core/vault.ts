@@ -73,6 +73,26 @@ export function noteOptions(app: App, folder: string): SelectOption[] {
 }
 
 /**
+ * То же для нескольких папок сразу. Заметки с одинаковым именем в разных
+ * папках схлопываются в один вариант: в результат попадает имя, и второй
+ * такой же пункт выбирать было бы не из чего.
+ */
+export function noteOptionsIn(app: App, folders: string[]): SelectOption[] {
+    const seen = new Set<string>();
+    const options: SelectOption[] = [];
+
+    for (const folder of folders) {
+        for (const option of noteOptions(app, folder)) {
+            if (seen.has(option.value)) continue;
+            seen.add(option.value);
+            options.push(option);
+        }
+    }
+
+    return options.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
  * Все теги хранилища без ведущей решётки. Публичного способа получить их
  * одним вызовом нет, поэтому обходим заметки и собираем из кеша. Список
  * стоит вычислять один раз при открытии формы, а не на каждое нажатие.

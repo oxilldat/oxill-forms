@@ -1,16 +1,22 @@
 import { App, Modal, Setting } from "obsidian";
 import { IMAGE_ACCEPT, isAllowedImage, saveAttachment, toWikiLink } from "../core/attachments";
+import { acceptAttribute, formatExtensions, isAllowedExtension } from "../core/extensions";
 import { conditionMet } from "../core/conditions";
+import { DataviewError, runDataviewQuery } from "../core/dataview";
+import { renderTemplate } from "../core/format";
+import { excludeMatching } from "../core/patterns";
+import { checkValue } from "../core/rules";
 import { sectionOwners } from "../core/sections";
 import { ConfirmModal } from "./ConfirmModal";
 import { FormResult } from "../core/FormResult";
 import type { FieldValue, FormData } from "../core/FormResult";
-import { noteOptions, vaultTags } from "../core/vault";
+import { noteOptions, noteOptionsIn, vaultTags } from "../core/vault";
 import { isDecorative } from "../core/types";
 import type { FieldDefinition, FormDefinition, SelectOption } from "../core/types";
 import { DataviewSuggest } from "./DataviewSuggest";
 import { FolderSuggest } from "./FolderSuggest";
 import { MultiValueField } from "./MultiValueField";
+import type { MultiValueSource } from "./MultiValueField";
 import { NoteSuggest } from "./NoteSuggest";
 
 export interface FormRuntime {
@@ -266,10 +272,25 @@ export class FormModal extends Modal {
             }
 
             case "multiselect": {
+                if (input.source === "dataview") {
+                    // Значения из запроса набираются только выбором. Когда
+                    // Dataview выключен, список взять неоткуда — оставляем
+                    // свободный ввод, иначе поле стало бы нерабочим.
+                    const enabled = this.runtime.dataviewEnabled;
+                    this.renderMultiValue(
+                        setting,
+                        field,
+                        enabled ? this.dataviewOptions(field.name, input.query) : [],
+                        !enabled,
+                        preset,
+                    );
+                    break;
+                }
+
                 const candidates =
                     input.source === "fixed"
                         ? input.options
-                        : noteOptions(this.app, input.folder);
+                        : noteOptionsIn(this.app, [input.folder, ...(input.folders ?? [])]);
                 this.renderMultiValue(setting, field, candidates, false, preset);
                 break;
             }
@@ -277,7 +298,13 @@ export class FormModal extends Modal {
             case "tag":
                 // Список тегов считаем один раз: обход хранилища на каждое
                 // нажатие клавиши был бы заметно медленным.
-                this.renderMultiValue(setting, field, vaultTags(this.app), true, preset);
+                this.renderMultiValue(
+                    setting,
+                    field,
+                    excludeMatching(vaultTags(this.app), input.exclude),
+                    true,
+                    preset,
+                );
                 break;
 
             case "dataview":
@@ -325,10 +352,17 @@ export class FormModal extends Modal {
             case "folder":
                 setting.addText((text) => {
                     if (hint !== "") text.setPlaceholder(hint);
+                    // Без подсказки не видно, что список папок сужен.
+                    else if (input.parent !== undefined) {
+                        text.setPlaceholder(`Папка внутри «${input.parent}»`);
+                    }
                     if (preset !== undefined) text.setValue(String(preset));
                     text.onChange((value) => this.setValue(field.name, value));
-                    new FolderSuggest(this.app, text.inputEl, (path) =>
-                        this.setValue(field.name, path),
+                    new FolderSuggest(
+                        this.app,
+                        text.inputEl,
+                        (path) => this.setValue(field.name, path),
+                        input.parent,
                     );
                 });
                 break;
@@ -395,10 +429,43 @@ export class FormModal extends Modal {
         });
     }
 
+    /**
+     * Варианты из запроса Dataview. Результат кешируется по значениям
+     * остальных полей: подсказка спрашивает список на каждое нажатие, а
+     * запрос ходит по всему хранилищу.
+     */
+    private dataviewOptions(fieldName: string, query: string): () => Promise<SelectOption[]> {
+        let cache: { signature: string; options: SelectOption[] } | null = null;
+
+        return async () => {
+            // Своё значение из контекста убираем: список не должен зависеть
+            // от того, что в этом же поле уже набрано.
+            const context = { ...this.values };
+            delete context[fieldName];
+            const signature = JSON.stringify(context);
+
+            if (cache !== null && cache.signature === signature) return cache.options;
+
+            try {
+                const values = await runDataviewQuery(this.app, query, context);
+                cache = {
+                    signature,
+                    options: values.map((value) => ({ value, label: value })),
+                };
+            } catch (error) {
+                const message =
+                    error instanceof DataviewError ? error.message : "Не удалось выполнить запрос";
+                this.setFieldError(fieldName, message);
+                cache = { signature, options: [] };
+            }
+            return cache.options;
+        };
+    }
+
     private renderMultiValue(
         setting: Setting,
         field: FieldDefinition,
-        candidates: SelectOption[],
+        candidates: MultiValueSource,
         allowNew: boolean,
         preset: FieldValue | undefined,
     ): void {
@@ -426,9 +493,14 @@ export class FormModal extends Modal {
     ): void {
         setting.setClass("mfl-upload");
 
+        const input = field.input;
+        if (input.type !== "image" && input.type !== "file") return;
+        const allowed = input.type === "file" ? (input.extensions ?? []) : [];
+
         const control = setting.controlEl;
         const picker = control.createEl("input", { type: "file" });
         if (isImage) picker.accept = IMAGE_ACCEPT;
+        else if (allowed.length > 0) picker.accept = acceptAttribute(allowed);
 
         const info = control.createDiv({ cls: "mfl-upload-info" });
         if (preset !== undefined) info.setText(String(preset));
@@ -444,12 +516,32 @@ export class FormModal extends Modal {
                 return;
             }
 
+            // Фильтр в системном окне обходится вводом имени руками, поэтому
+            // расширение проверяем ещё раз здесь.
+            if (!isAllowedExtension(file.name, allowed)) {
+                info.addClass("mfl-error");
+                info.setText(`Подходят только: ${formatExtensions(allowed)}`);
+                picker.value = "";
+                return;
+            }
+
             info.removeClass("mfl-error");
             info.setText("Сохраняю…");
 
             try {
-                const folder = isImage ? this.runtime.imageFolder : this.runtime.fileFolder;
-                const path = await saveAttachment(this.app, file, folder);
+                // Папка поля важнее общей: общая остаётся значением по
+                // умолчанию, но форма может складывать своё отдельно.
+                const fallback = isImage ? this.runtime.imageFolder : this.runtime.fileFolder;
+                const folder = input.folder?.trim() || fallback;
+
+                // Шаблон имени считаем по тому, что уже заполнено: файл
+                // выбирают в середине формы, а не после её отправки.
+                const named =
+                    input.filenameTemplate === undefined
+                        ? undefined
+                        : renderTemplate(input.filenameTemplate, this.values).trim();
+
+                const path = await saveAttachment(this.app, file, folder, named);
                 this.createdAttachments.push(path);
                 this.setValue(field.name, toWikiLink(path));
                 info.setText(path);
@@ -541,10 +633,17 @@ export class FormModal extends Modal {
         }
 
         for (const field of this.form.fields) {
-            if (!field.required || !this.isShown(field)) continue;
-            if (!this.isEmpty(this.values[field.name])) continue;
-            if (errors.has(field.name)) continue;
-            errors.set(field.name, "Поле обязательное");
+            if (!this.isShown(field) || errors.has(field.name)) continue;
+
+            if (this.isEmpty(this.values[field.name])) {
+                // Про пустое поле говорим только если ответ обязателен: у
+                // непустых правил к пустоте претензий нет.
+                if (field.required) errors.set(field.name, "Поле обязательное");
+                continue;
+            }
+
+            const failure = checkValue(field, this.values[field.name]);
+            if (failure !== null) errors.set(field.name, failure);
         }
 
         if (errors.size > 0) {

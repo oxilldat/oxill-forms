@@ -6,8 +6,9 @@ import {
     folderNames,
     formsInFolder,
     groupByFolder,
+    showsAllForms,
 } from "../core/formFolders";
-import { plural } from "../core/forms";
+import { t } from "../i18n";
 import { isValidName } from "../core/naming";
 import type { FormDefinition } from "../core/types";
 import type ModalFormsLitePlugin from "../main";
@@ -25,6 +26,15 @@ export class FormListModal extends Modal {
     private selected: string | null = null;
     private foldersEl: HTMLElement | null = null;
     private cardsEl: HTMLElement | null = null;
+    /** Открыта строка ввода названия новой папки. */
+    private creating = false;
+    private folderInput: HTMLInputElement | null = null;
+    /**
+     * Форма, которую сейчас тащат. dataTransfer тоже заполняем, но читать
+     * его во время `dragover` браузер не даёт, а подсветить цель нужно
+     * именно тогда.
+     */
+    private dragging: string | null = null;
 
     constructor(
         app: App,
@@ -37,8 +47,9 @@ export class FormListModal extends Modal {
         const { contentEl, modalEl } = this;
         modalEl.addClass("mfl-wide-modal");
         contentEl.addClass("mfl-modal");
-        contentEl.createEl("h3", { text: "Формы", cls: "mfl-title" });
 
+        // Заголовка у окна нет намеренно: колонка папок и карточки форм и так
+        // говорят, куда попал, а строка «Формы» только отъедала высоту.
         const browser = contentEl.createDiv({ cls: "mfl-browser" });
         this.foldersEl = browser.createDiv({ cls: "mfl-folders" });
         this.cardsEl = browser.createDiv({ cls: "mfl-cards" });
@@ -50,9 +61,25 @@ export class FormListModal extends Modal {
         return this.plugin.settings.forms;
     }
 
+    private get folders(): string[] {
+        return this.plugin.settings.folders;
+    }
+
+    /** Скрыта ли строка «Все формы» — правило целиком в ядре. */
+    private get allFormsHidden(): boolean {
+        return !showsAllForms(this.forms, this.folders, this.plugin.settings.hideAllFormsFolder);
+    }
+
     private render(): void {
         // Папка могла исчезнуть вместе с последней своей формой.
-        if (!folderExists(this.forms, this.selected)) this.selected = null;
+        if (!folderExists(this.forms, this.selected, this.folders)) this.selected = null;
+
+        // Без строки «Все формы» выбор не может быть пустым: открываем первую
+        // папку, иначе окно показывало бы список без отмеченной строки слева.
+        if (this.selected === null && this.allFormsHidden) {
+            this.selected = groupByFolder(this.forms, this.folders)[0]?.name ?? null;
+        }
+
         this.renderFolders();
         this.renderCards();
     }
@@ -62,17 +89,40 @@ export class FormListModal extends Modal {
         if (!container) return;
         container.empty();
 
-        this.renderFolderItem(container, null, "Все формы", "layers", this.forms.length);
+        const head = container.createDiv({ cls: "mfl-folders-head" });
+        head.createDiv({ cls: "mfl-folders-title", text: t("browser.folders") });
+        const add = head.createDiv({
+            cls: "clickable-icon",
+            attr: { "aria-label": t("browser.newFolder") },
+        });
+        setIcon(add, "folder-plus");
+        add.addEventListener("click", () => {
+            // Повторное нажатие не должно пересоздавать строку ввода: набранное
+            // название пропало бы, а старое поле ушло бы из разметки с фокусом.
+            if (this.creating) {
+                this.folderInput?.focus();
+                return;
+            }
+            this.creating = true;
+            this.renderFolders();
+        });
 
-        for (const entry of groupByFolder(this.forms)) {
+        const list = container.createDiv({ cls: "mfl-folders-list" });
+        if (!this.allFormsHidden) {
+            this.renderFolderItem(list, null, t("browser.allForms"), "layers", this.forms.length);
+        }
+
+        for (const entry of groupByFolder(this.forms, this.folders)) {
             this.renderFolderItem(
-                container,
+                list,
                 entry.name,
-                entry.name === "" ? "Без папки" : entry.name,
+                entry.name === "" ? t("browser.noFolder") : entry.name,
                 entry.name === "" ? "circle-dashed" : "folder",
                 entry.count,
             );
         }
+
+        if (this.creating) this.renderNewFolder(list);
     }
 
     private renderFolderItem(
@@ -90,28 +140,200 @@ export class FormListModal extends Modal {
         item.createDiv({ cls: "mfl-folder-name", text: label });
         item.createDiv({ cls: "mfl-folder-count", text: String(count) });
 
+        // Крестик у каждой папки. «Все формы» и «Без папки» не папки, а
+        // способ смотреть на список — убирать там нечего.
+        if (value !== null && value !== "") {
+            // По классу стили понимают, что счётчик этой строки на ховере
+            // уступает место крестику.
+            item.addClass("is-forgettable");
+            const empty = count === 0;
+            const forget = item.createDiv({
+                cls: "clickable-icon mfl-folder-forget",
+                attr: { "aria-label": empty ? t("browser.forgetFolder") : t("browser.deleteFolder") },
+            });
+            setIcon(forget, "x");
+            forget.addEventListener("click", (event) => {
+                // Иначе клик заодно выберет папку, которой сейчас не станет.
+                event.stopPropagation();
+                // У пустой папки терять нечего, спрашивать не о чем.
+                if (empty) void this.forgetFolder(value);
+                else this.confirmDeleteFolder(value, count);
+            });
+        }
+
         item.addEventListener("click", () => {
             this.selected = value;
             this.render();
         });
+
+        // «Все формы» — не папка, и класть в неё нечего.
+        if (value !== null) this.acceptDrop(item, value);
+    }
+
+    private async forgetFolder(name: string): Promise<void> {
+        await this.plugin.forgetFolder(name);
+        if (this.selected === name) this.selected = null;
+        this.render();
+    }
+
+    /**
+     * Удаление непустой папки. Спрашиваем не потому, что что-то пропадёт, а
+     * потому, что разложить формы обратно — это по перетаскиванию на каждую.
+     */
+    private confirmDeleteFolder(name: string, count: number): void {
+        new ConfirmModal(this.app, {
+            title: t("browser.deleteFolderTitle", { name }),
+            // Единственная форма — отдельной фразой: во всех языках счёт
+            // одного предмета звучит иначе, чем счёт нескольких.
+            message:
+                count === 1
+                    ? t("browser.deleteFolderOne")
+                    : t("browser.deleteFolderMany", { count }),
+            icon: "folder-x",
+            danger: true,
+            confirmText: t("confirm.deleteFolder"),
+            onConfirm: async () => {
+                await this.plugin.deleteFolder(name);
+                if (this.selected === name) this.selected = null;
+                this.render();
+            },
+        }).open();
+    }
+
+    /** Строка ввода вместо окна: папка нужна на один раз и сразу. */
+    private renderNewFolder(container: HTMLElement): void {
+        const row = container.createDiv({ cls: "mfl-folder mfl-folder-new" });
+        const iconBox = row.createDiv({ cls: "mfl-folder-icon" });
+        setIcon(iconBox, "folder-plus");
+
+        const input = row.createEl("input", {
+            cls: "mfl-folder-input",
+            attr: { type: "text", placeholder: t("browser.folderName") },
+        });
+        this.folderInput = input;
+
+        // Ввод закрывается один раз: Enter уводит фокус, и без флага сразу
+        // за ним пришёл бы blur со второй попыткой создать ту же папку.
+        let done = false;
+        const finish = async (save: boolean): Promise<void> => {
+            if (done) return;
+            done = true;
+            this.creating = false;
+            this.folderInput = null;
+
+            const name = input.value.trim();
+            if (save && name !== "") {
+                if (folderNames(this.forms, this.folders).includes(name)) {
+                    new Notice(t("browser.folderExists", { name }));
+                } else {
+                    await this.plugin.createFolder(name);
+                }
+                this.selected = name;
+            }
+            this.render();
+        };
+
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                void finish(true);
+                return;
+            }
+            if (event.key === "Escape") {
+                // Иначе Escape закроет заодно и всё окно списка форм.
+                event.preventDefault();
+                event.stopPropagation();
+                void finish(false);
+            }
+        });
+        input.addEventListener("blur", () => void finish(true));
+
+        window.setTimeout(() => input.focus(), 0);
     }
 
     private renderCards(): void {
         const container = this.cardsEl;
         if (!container) return;
         container.empty();
+        container.toggleClass("is-droppable", this.selected !== null);
+
+        // Открытая папка — тоже цель: бросить форму в её пустоту так же
+        // естественно, как в строку слева.
+        if (this.selected !== null) this.acceptDrop(container, this.selected);
 
         const forms = formsInFolder(this.forms, this.selected);
         if (forms.length === 0) {
-            container.createDiv({ cls: "mfl-cards-empty", text: "В этой папке пока пусто" });
+            container.createDiv({
+                cls: "mfl-cards-empty",
+                text:
+                    this.selected === null
+                        ? t("browser.empty")
+                        : t("browser.emptyFolder"),
+            });
             return;
         }
 
         for (const form of forms) this.renderCard(container, form);
     }
 
+    /**
+     * Делает элемент целью перетаскивания. Перекладываем на месте: подтверждать
+     * тут нечего, а вернуть форму назад — это ещё одно движение мышью.
+     */
+    private acceptDrop(target: HTMLElement, folder: string): void {
+        target.addEventListener("dragover", (event) => {
+            if (this.dragging === null) return;
+            // Без preventDefault браузер считает, что бросать сюда нельзя.
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+            target.addClass("is-drop-target");
+        });
+
+        target.addEventListener("dragleave", (event) => {
+            // Переход на вложенный значок или подпись — это тоже dragleave
+            // самой строки. Снимаем подсветку, только если ушли наружу.
+            const to = event.relatedTarget;
+            if (to instanceof Node && target.contains(to)) return;
+            target.removeClass("is-drop-target");
+        });
+
+        target.addEventListener("drop", async (event) => {
+            event.preventDefault();
+            target.removeClass("is-drop-target");
+
+            const name = this.dragging ?? event.dataTransfer?.getData("text/plain") ?? "";
+            this.dragging = null;
+            if (name === "") return;
+
+            const form = this.forms.find((candidate) => candidate.name === name);
+            if (!form || (form.folder?.trim() ?? "") === folder) return;
+
+            await this.plugin.moveFormToFolder(name, folder);
+            new Notice(
+                folder === ""
+                    ? t("browser.movedOut", { title: form.title })
+                    : t("browser.moved", { title: form.title, folder }),
+            );
+            this.render();
+        });
+    }
+
     private renderCard(container: HTMLElement, form: FormDefinition): void {
-        const card = container.createDiv({ cls: "mfl-card" });
+        const card = container.createDiv({ cls: "mfl-card", attr: { draggable: "true" } });
+
+        card.addEventListener("dragstart", (event) => {
+            this.dragging = form.name;
+            card.addClass("is-dragging");
+            if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", form.name);
+            }
+        });
+
+        card.addEventListener("dragend", () => {
+            this.dragging = null;
+            card.removeClass("is-dragging");
+        });
 
         const head = card.createDiv({ cls: "mfl-card-head" });
         const iconBox = head.createDiv({ cls: "mfl-card-icon" });
@@ -121,29 +343,29 @@ export class FormListModal extends Modal {
         text.createDiv({ cls: "mfl-card-title", text: form.title });
         text.createDiv({
             cls: "mfl-card-meta",
-            text: `${form.name} · ${plural(form.fields.length, "поле", "поля", "полей")}`,
+            text: `${form.name} · ${t("browser.fields", { count: form.fields.length })}`,
         });
 
         if (!isValidName(form.name)) {
             text.createDiv({
                 cls: "mfl-warning",
-                text: "Идентификатор содержит недопустимые символы — переименуйте форму",
+                text: t("browser.badName"),
             });
         }
 
         const marks = head.createDiv({ cls: "mfl-card-marks" });
-        if (form.template) this.mark(marks, "file-text", "Есть шаблон заметки");
-        if (form.command?.enabled) this.mark(marks, "terminal", "Есть команда в палитре");
+        if (form.template) this.mark(marks, "file-text", t("browser.hasTemplate"));
+        if (form.command?.enabled) this.mark(marks, "terminal", t("browser.hasCommand"));
 
         const actions = card.createDiv({ cls: "mfl-card-actions" });
-        this.action(actions, "pencil", "Свойства формы", () => this.editMeta(form));
-        this.action(actions, "settings", "Настройка полей", () => this.editFields(form));
-        this.action(actions, "copy", "Дублировать", async () => {
+        this.action(actions, "pencil", t("browser.editMeta"), () => this.editMeta(form));
+        this.action(actions, "settings", t("browser.editFields"), () => this.editFields(form));
+        this.action(actions, "copy", t("browser.duplicate"), async () => {
             await this.plugin.duplicateForm(form.name);
             this.render();
         });
-        this.action(actions, "clipboard-copy", "Экспорт в буфер", () => void this.exportForm(form));
-        this.action(actions, "trash-2", "Удалить", () => this.deleteForm(form));
+        this.action(actions, "clipboard-copy", t("browser.export"), () => void this.exportForm(form));
+        this.action(actions, "trash-2", t("common.delete"), () => this.deleteForm(form));
     }
 
     private mark(container: HTMLElement, icon: string, tooltip: string): void {
@@ -171,17 +393,17 @@ export class FormListModal extends Modal {
             await navigator.clipboard.writeText(
                 bundleToJson([form], this.plugin.manifest.version),
             );
-            new Notice(`Форма «${form.title}» скопирована в буфер обмена`);
+            new Notice(t("browser.exported", { title: form.title }));
         } catch (error) {
             console.error("[modal-forms-lite] не удалось скопировать форму", error);
-            new Notice("Не удалось обратиться к буферу обмена");
+            new Notice(t("browser.clipboardFailed"));
         }
     }
 
     private editMeta(form: FormDefinition): void {
         new FormMetaModal(this.app, {
             form,
-            folders: folderNames(this.forms),
+            folders: folderNames(this.forms, this.folders),
             isNameTaken: (name) => this.plugin.isNameTaken(name, form.name),
             onSubmit: async ({ name, title, folder, icon, command, template }) => {
                 await this.plugin.upsertForm(
@@ -208,8 +430,8 @@ export class FormListModal extends Modal {
 
     private deleteForm(form: FormDefinition): void {
         new ConfirmModal(this.app, {
-            title: "Удалить форму?",
-            message: `Форма «${form.title}» будет удалена без возможности восстановления.`,
+            title: t("browser.deleteFormTitle"),
+            message: t("browser.deleteFormText", { title: form.title }),
             icon: "trash-2",
             danger: true,
             onConfirm: async () => {

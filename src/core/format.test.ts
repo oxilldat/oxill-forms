@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { asDataviewText, asListText, renderNote, renderTemplate, selectFields } from "./format";
+import {
+    asDataviewText,
+    asListText,
+    extractCursor,
+    renderNote,
+    renderNoteText,
+    renderTemplate,
+    selectFields,
+} from "./format";
 import type { FormData } from "./FormResult";
 
 const data: FormData = {
@@ -78,4 +86,15 @@ test("renderTemplate обрабатывает несколько подстан�
         renderTemplate("{{ person }} — {{ date }}", data),
         "Мария Сидорова — 2026-07-30",
     );
+});
+
+test("метку курсора можно вырезать отдельным шагом", () => {
+    // Между подстановкой и поиском курсора вклинивается Templater: он меняет
+    // длину текста, поэтому смещение считается уже после него.
+    const text = renderNoteText("# {{ person }}\n\n{{cursor}}конец", data, "");
+    assert.equal(text, "# Мария Сидорова\n\n{{cursor}}конец");
+
+    const note = extractCursor(text.replace("Мария Сидорова", "Мария"));
+    assert.equal(note.text, "# Мария\n\nконец");
+    assert.equal(note.text.slice(note.cursor), "конец");
 });

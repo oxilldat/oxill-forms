@@ -2,6 +2,10 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import { isDataviewAvailable } from "../core/dataview";
 import { bundleToJson } from "../core/exchange";
 import { freeName } from "../core/forms";
+import { isLocale, LANGUAGE_NAMES, setLanguage, t } from "../i18n";
+import { isValidGlobalName } from "../core/naming";
+import { DEFAULT_GLOBAL_NAME } from "../core/settings";
+import { isTemplaterAvailable } from "../core/templater";
 import { createNote } from "../core/vault";
 import { applyNoteUpdates, scanNotes } from "../core/noteMigration";
 import type { NoteUpdate } from "../core/noteMigration";
@@ -31,21 +35,21 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         const forms = this.group(
-            "Формы",
-            "Формы хранятся в настройках плагина и вызываются по идентификатору",
+            t("settings.formsGroup"),
+            t("settings.formsGroupDesc"),
         );
 
         new Setting(forms)
-            .setName("Браузер форм")
-            .setDesc("Список форм с папками и карточками: правка, дублирование, удаление")
+            .setName(t("settings.browser"))
+            .setDesc(t("settings.browserDesc"))
             .addButton((button) =>
                 button
-                    .setButtonText("Список форм")
+                    .setButtonText(t("settings.formList"))
                     .onClick(() => new FormListModal(this.app, this.plugin).open()),
             )
             .addButton((button) =>
                 button
-                    .setButtonText("Создать форму")
+                    .setButtonText(t("settings.createForm"))
                     .setCta()
                     .onClick(() => this.plugin.openCreateFormModal()),
             );
@@ -53,31 +57,45 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         this.renderImportSetting(forms);
         this.renderExportSetting(forms);
 
-        const attachments = this.group("Вложения");
+        this.renderLanguageSetting();
+
+        const attachments = this.group(t("settings.attachmentsGroup"));
 
         this.renderFolderSetting(
             attachments,
-            "Место сохранения фотографий",
-            "Куда попадают JPEG, PNG и WebP из полей типа «Изображение»",
+            t("settings.imageFolder"),
+            t("settings.imageFolderDesc"),
             this.plugin.settings.imageFolder,
             (folder) => this.plugin.updateSettings({ imageFolder: folder }),
         );
 
         this.renderFolderSetting(
             attachments,
-            "Место сохранения файлов",
-            "Куда попадает всё остальное из полей типа «Файл»",
+            t("settings.fileFolder"),
+            t("settings.fileFolderDesc"),
             this.plugin.settings.fileFolder,
             (folder) => this.plugin.updateSettings({ fileFolder: folder }),
         );
 
-        const extra = this.group("Дополнительно");
+        const extra = this.group(t("settings.extraGroup"));
 
         new Setting(extra)
-            .setName("Не спрашивать при закрытии без сохранения")
+            .setName(t("settings.hideAllForms"))
             .setDesc(
-                "Редактор формы и редактор поля будут закрываться сразу. " +
-                    "Несохранённые правки при этом теряются без предупреждения",
+                t("settings.hideAllFormsDesc"),
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.hideAllFormsFolder)
+                    .onChange((value) =>
+                        this.plugin.updateSettings({ hideAllFormsFolder: value }),
+                    ),
+            );
+
+        new Setting(extra)
+            .setName(t("settings.skipDiscard"))
+            .setDesc(
+                t("settings.skipDiscardDesc"),
             )
             .addToggle((toggle) =>
                 toggle
@@ -88,14 +106,15 @@ export class ModalFormsSettingTab extends PluginSettingTab {
             );
 
         this.renderDataviewSetting(extra);
+        this.renderTemplaterSetting(extra);
+        this.renderGlobalNameSetting(extra);
 
-        const notes = this.group("Заметки");
+        const notes = this.group(t("settings.notesGroup"));
 
         new Setting(notes)
-            .setName("Автоматически обновлять заметки при изменении формы")
+            .setName(t("settings.autoUpdate"))
             .setDesc(
-                "Если переименовать поле, плагин сразу переименует ключ во frontmatter " +
-                    "заметок, созданных этой формой",
+                t("settings.autoUpdateDesc"),
             )
             .addToggle((toggle) =>
                 toggle
@@ -117,15 +136,15 @@ export class ModalFormsSettingTab extends PluginSettingTab {
      * до применения важнее, чем сэкономить нажатие.
      */
     private renderScanSetting(container: HTMLElement): void {
-        const setting = new Setting(container).setName("Заметки со старыми полями");
+        const setting = new Setting(container).setName(t("settings.scan"));
 
         if (this.found === null) {
-            setting.setDesc("Проверить, остались ли заметки с прежними названиями полей");
+            setting.setDesc(t("settings.scanDesc"));
             setting.addButton((button) =>
-                button.setButtonText("Сканировать хранилище").onClick(() => {
+                button.setButtonText(t("settings.scanButton")).onClick(() => {
                     const found = scanNotes(this.app, this.plugin.settings.forms);
                     if (found.length === 0) {
-                        new Notice("Заметок со старыми полями не найдено");
+                        new Notice(t("settings.scanNothing"));
                         return;
                     }
                     this.found = found;
@@ -136,10 +155,10 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         }
 
         const count = this.found.length;
-        setting.setDesc("Заметки с прежними названиями полей готовы к обновлению");
+        setting.setDesc(t("settings.scanFound"));
 
         setting.addButton((button) =>
-            button.setButtonText("Отмена").onClick(() => {
+            button.setButtonText(t("common.cancel")).onClick(() => {
                 this.found = null;
                 this.display();
             }),
@@ -147,15 +166,15 @@ export class ModalFormsSettingTab extends PluginSettingTab {
 
         setting.addButton((button) =>
             button
-                .setButtonText(`Обновить заметки (${count})`)
+                .setButtonText(t("settings.scanApply", { count }))
                 .setCta()
                 .onClick(async () => {
                     const updates = this.found ?? [];
                     this.found = null;
                     const { changed, failed } = await applyNoteUpdates(this.app, updates);
-                    new Notice(`Обновлено заметок: ${changed}`);
+                    new Notice(t("settings.notesUpdated", { count: changed }));
                     if (failed.length > 0) {
-                        new Notice(`Не удалось обновить: ${failed.length}. Подробности в консоли`);
+                        new Notice(t("settings.notesFailed", { count: failed.length }));
                     }
                     this.display();
                 }),
@@ -175,9 +194,9 @@ export class ModalFormsSettingTab extends PluginSettingTab {
             onImport: async (forms, renamed) => {
                 for (const form of forms) await this.plugin.upsertForm(form);
 
-                new Notice(`Импортировано форм: ${forms.length}`);
+                new Notice(t("settings.imported", { count: forms.length }));
                 if (renamed.length > 0) {
-                    new Notice(`Занятые имена переименованы: ${renamed.join(", ")}`);
+                    new Notice(t("settings.importRenamed", { names: renamed.join(", ") }));
                 }
             },
         }).open();
@@ -186,10 +205,10 @@ export class ModalFormsSettingTab extends PluginSettingTab {
     /** Импорт форм из конверта — отдельной строкой, в пару к экспорту. */
     private renderImportSetting(container: HTMLElement): void {
         new Setting(container)
-            .setName("Импорт форм")
-            .setDesc("Вставить конверт форм из другого хранилища")
+            .setName(t("settings.import"))
+            .setDesc(t("settings.importDesc"))
             .addButton((button) =>
-                button.setButtonText("Импортировать").onClick(() => this.importForm()),
+                button.setButtonText(t("settings.importButton")).onClick(() => this.importForm()),
             );
     }
 
@@ -198,40 +217,45 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         const forms = this.plugin.settings.forms;
 
         const setting = new Setting(container)
-            .setName("Экспорт всех форм")
-            .setDesc(`В конверт попадут все формы (${forms.length}) и версия плагина`);
+            .setName(t("settings.export"))
+            .setDesc(t("settings.exportDesc", { count: forms.length }));
 
         if (forms.length === 0) {
-            setting.setDesc("Экспортировать пока нечего — форм нет");
+            setting.setDesc(t("settings.exportEmpty"));
             return;
         }
 
         setting.addButton((button) =>
-            button.setButtonText("В буфер").onClick(async () => {
+            button.setButtonText(t("settings.exportClipboard")).onClick(async () => {
                 try {
                     await navigator.clipboard.writeText(
                         bundleToJson(forms, this.plugin.manifest.version),
                     );
-                    new Notice(`Скопировано форм: ${forms.length}`);
+                    new Notice(t("settings.exportedCount", { count: forms.length }));
                 } catch (error) {
                     console.error("[modal-forms-lite] не удалось скопировать формы", error);
-                    new Notice("Не удалось обратиться к буферу обмена");
+                    new Notice(t("browser.clipboardFailed"));
                 }
             }),
         );
 
         setting.addButton((button) =>
-            button.setButtonText("В заметку").onClick(async () => {
+            button.setButtonText(t("settings.exportNote")).onClick(async () => {
                 const json = bundleToJson(forms, this.plugin.manifest.version);
                 const stamp = new Date().toISOString().slice(0, 10);
-                const content = `# Формы Modal Forms Lite\n\nЭкспорт от ${stamp}.\n\n\`\`\`json\n${json}\n\`\`\`\n`;
+                const content = `${t("settings.exportNoteBody", { date: stamp })}\n\n\`\`\`json\n${json}\n\`\`\`\n`;
 
                 try {
-                    const file = await createNote(this.app, "", `Формы ${stamp}`, content);
+                    const file = await createNote(
+                    this.app,
+                    "",
+                    t("settings.exportNoteTitle", { date: stamp }),
+                    content,
+                );
                     await this.app.workspace.getLeaf(false).openFile(file);
                 } catch (error) {
                     console.error("[modal-forms-lite] не удалось создать заметку", error);
-                    new Notice("Не удалось создать заметку с экспортом");
+                    new Notice(t("settings.noteFailed"));
                 }
             }),
         );
@@ -245,11 +269,11 @@ export class ModalFormsSettingTab extends PluginSettingTab {
         const available = isDataviewAvailable(this.app);
 
         const setting = new Setting(container)
-            .setName("Разрешить поля «Список из запроса Dataview»")
+            .setName(t("settings.dataview"))
             .setDesc(
                 available
-                    ? "Плагин Dataview найден. Учтите: такие поля исполняют написанный вами JS-код"
-                    : "Плагин Dataview не установлен или отключён — включать нечего",
+                    ? t("settings.dataviewOn")
+                    : t("settings.dataviewOff"),
             )
             .addToggle((toggle) =>
                 toggle
@@ -263,6 +287,99 @@ export class ModalFormsSettingTab extends PluginSettingTab {
             );
 
         if (!available) setting.setClass("mfl-setting-disabled");
+    }
+
+    /**
+     * Язык плагина. Названия языков написаны на них самих: их узнают, даже
+     * когда настройки говорят на непонятном.
+     */
+    private renderLanguageSetting(): void {
+        const group = this.group(t("settings.languageGroup"));
+
+        new Setting(group)
+            .setName(t("settings.language"))
+            .setDesc(t("settings.languageDesc"))
+            .addDropdown((dropdown) => {
+                for (const [code, name] of Object.entries(LANGUAGE_NAMES)) {
+                    dropdown.addOption(code, name);
+                }
+                dropdown.setValue(this.plugin.settings.language).onChange(async (value) => {
+                    if (!isLocale(value)) return;
+                    await this.plugin.updateSettings({ language: value });
+                    // Сразу применяем и перерисовываем: увидеть новый язык
+                    // тут же убедительнее любой надписи «требуется перезапуск».
+                    setLanguage(value);
+                    this.plugin.refreshCommands();
+                    this.display();
+                });
+            });
+    }
+
+    /**
+     * Обработка шаблонов через Templater. Как и с Dataview: нет плагина —
+     * нечего включать, поэтому переключатель блокируется, а не обещает то,
+     * чего не будет.
+     */
+    private renderTemplaterSetting(container: HTMLElement): void {
+        const available = isTemplaterAvailable(this.app);
+
+        const setting = new Setting(container)
+            .setName(t("settings.templater"))
+            .setDesc(
+                available
+                    ? t("settings.templaterOn")
+                    : t("settings.templaterOff"),
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.templaterEnabled && available)
+                    .setDisabled(!available)
+                    .onChange(async (value) => {
+                        await this.plugin.updateSettings({ templaterEnabled: value });
+                        this.display();
+                    }),
+            );
+
+        if (!available) setting.setClass("mfl-setting-disabled");
+    }
+
+    /**
+     * Имя глобальной переменной с API. Сохраняем не на каждое нажатие, а по
+     * уходу из поля: на полпути к «ModalForms» имя вроде «Mod» тоже годное,
+     * и API успело бы полежать под ним.
+     */
+    private renderGlobalNameSetting(container: HTMLElement): void {
+        const current = this.plugin.settings.globalName;
+
+        new Setting(container)
+            .setName(t("settings.globalName"))
+            .setDesc(
+                t("settings.globalNameDesc", { name: current }),
+            )
+            .addText((text) => {
+                text.setPlaceholder(DEFAULT_GLOBAL_NAME).setValue(current);
+
+                text.inputEl.addEventListener("blur", async () => {
+                    const name = text.getValue().trim();
+                    if (name === current) return;
+
+                    // Пустое поле — возврат к привычному имени, а не отсутствие
+                    // переменной: без неё API не достать ниоткуда.
+                    const wanted = name === "" ? DEFAULT_GLOBAL_NAME : name;
+                    if (!isValidGlobalName(wanted)) {
+                        new Notice(
+                            t("settings.globalNameBad"),
+                        );
+                        text.setValue(current);
+                        return;
+                    }
+
+                    await this.plugin.updateSettings({ globalName: wanted });
+                    this.plugin.exposeApi(wanted);
+                    new Notice(t("settings.globalNameSet", { name: wanted }));
+                    this.display();
+                });
+            });
     }
 
     /**
@@ -281,7 +398,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
             .setName(name)
             .setDesc(description)
             .addText((text) => {
-                text.setPlaceholder("Корень хранилища")
+                text.setPlaceholder(t("settings.folderPlaceholder"))
                     .setValue(value)
                     .onChange(async (entered) => {
                         await save(entered.trim());

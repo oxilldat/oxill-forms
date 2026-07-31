@@ -1,4 +1,5 @@
 import { AbstractInputSuggest, App, TFolder } from "obsidian";
+import { isInsideFolder } from "../core/paths";
 
 /**
  * Выпадающий список папок хранилища для текстового поля. Пустой запрос
@@ -6,7 +7,13 @@ import { AbstractInputSuggest, App, TFolder } from "obsidian";
  * как подсказка при наборе.
  */
 export class FolderSuggest extends AbstractInputSuggest<TFolder> {
-    constructor(app: App, textInputEl: HTMLInputElement, onChoose: (path: string) => void) {
+    constructor(
+        app: App,
+        textInputEl: HTMLInputElement,
+        onChoose: (path: string) => void,
+        /** Показывать только папки внутри этой. Пусто — всё хранилище. */
+        private parent?: string,
+    ) {
         super(app, textInputEl);
 
         this.onSelect((folder) => {
@@ -21,6 +28,7 @@ export class FolderSuggest extends AbstractInputSuggest<TFolder> {
         return this.app.vault
             .getAllLoadedFiles()
             .filter((file): file is TFolder => file instanceof TFolder)
+            .filter((folder) => isInsideFolder(folder.path, this.parent))
             .filter((folder) => folder.path.toLowerCase().includes(search))
             .sort((a, b) => a.path.localeCompare(b.path));
     }

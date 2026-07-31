@@ -1,6 +1,13 @@
 import { App, Modal, Setting, setIcon } from "obsidian";
-import { createField, moveField, removeFieldAt, validateFields } from "../core/fields";
-import { INPUT_TYPE_LABELS } from "../core/types";
+import {
+    createField,
+    duplicateField,
+    moveField,
+    removeFieldAt,
+    reorderField,
+    validateFields,
+} from "../core/fields";
+import { inputTypeLabel } from "../core/labels";
 import type { EditorContext, FieldDefinition, FormDefinition } from "../core/types";
 import { ConfirmModal } from "./ConfirmModal";
 import { FieldEditor } from "./FieldEditor";
@@ -35,6 +42,8 @@ export class FormEditorModal extends Modal {
      */
     private originalNames = new WeakMap<FieldDefinition, string>();
     private fieldsEl: HTMLElement | null = null;
+    /** Номер поля, которое сейчас тащат. */
+    private dragging: number | null = null;
     private errorEl: HTMLElement | null = null;
 
     constructor(
@@ -95,6 +104,33 @@ export class FormEditorModal extends Modal {
         const block = container.createDiv({ cls: "mfl-field-block" });
         const header = block.createDiv({ cls: "mfl-field-header" });
 
+        // Место, куда встанет поле при броске. Полоса рисуется поверх стыка,
+        // поэтому список не дёргается, пока водишь мышью.
+        this.acceptFieldDrop(block, index);
+
+        // Тащим только за ручку: развёрнутое поле занимает пол-окна, и
+        // перетаскивание всего блока мешало бы просто кликать по настройкам.
+        const handle = header.createDiv({
+            cls: "mfl-field-handle",
+            attr: { "aria-label": "Перетащить", draggable: "true" },
+        });
+        setIcon(handle, "grip-vertical");
+        handle.addEventListener("dragstart", (event) => {
+            this.dragging = index;
+            block.addClass("is-dragging");
+            if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", field.name);
+                // Иначе браузер утащит картинку одной только ручки.
+                event.dataTransfer.setDragImage(block, 12, 12);
+            }
+        });
+        handle.addEventListener("dragend", () => {
+            this.dragging = null;
+            block.removeClass("is-dragging");
+            this.clearDropMarks();
+        });
+
         const isOpen = this.expanded.has(field);
         // Развёрнутый блок теряет заливку: внутри лежат карточки настроек,
         // и на одинаковом фоне они бы не читались.
@@ -109,7 +145,7 @@ export class FormEditorModal extends Modal {
 
         const caption = header.createDiv({ cls: "mfl-field-caption" });
         caption.createSpan({ text: field.label?.trim() || field.name });
-        caption.createSpan({ cls: "mfl-field-type", text: INPUT_TYPE_LABELS[field.input.type] });
+        caption.createSpan({ cls: "mfl-field-type", text: inputTypeLabel(field.input.type) });
         caption.addEventListener("click", () => chevron.click());
 
         this.iconButton(header, "arrow-up", "Выше", () => {
@@ -118,6 +154,14 @@ export class FormEditorModal extends Modal {
         });
         this.iconButton(header, "arrow-down", "Ниже", () => {
             this.draft.fields = moveField(this.draft.fields, index, 1);
+            this.renderFields();
+        });
+        this.iconButton(header, "copy", "Дублировать поле", () => {
+            this.draft.fields = duplicateField(this.draft.fields, index);
+            // Копия сразу раскрыта: её всё равно надо править — ради этого
+            // её и делают.
+            const copy = this.draft.fields[index + 1];
+            if (copy) this.expanded.add(copy);
             this.renderFields();
         });
         this.iconButton(header, "trash-2", "Удалить поле", () => {
@@ -135,6 +179,53 @@ export class FormEditorModal extends Modal {
             context: this.options.context,
             onChange: () => this.clearError(),
         }).render(body);
+    }
+
+    /**
+     * Делает блок поля целью броска. Куда именно встанет перетаскиваемое —
+     * решает половина блока, над которой курсор: выше середины значит «перед»,
+     * ниже — «после». Без этого нельзя положить поле в самый конец списка.
+     */
+    private acceptFieldDrop(block: HTMLElement, index: number): void {
+        const targetIndex = (event: DragEvent): number => {
+            const box = block.getBoundingClientRect();
+            return event.clientY < box.top + box.height / 2 ? index : index + 1;
+        };
+
+        block.addEventListener("dragover", (event) => {
+            if (this.dragging === null) return;
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+
+            this.clearDropMarks();
+            block.addClass(targetIndex(event) === index ? "is-drop-before" : "is-drop-after");
+        });
+
+        block.addEventListener("dragleave", (event) => {
+            const to = event.relatedTarget;
+            if (to instanceof Node && block.contains(to)) return;
+            block.removeClass("is-drop-before");
+            block.removeClass("is-drop-after");
+        });
+
+        block.addEventListener("drop", (event) => {
+            event.preventDefault();
+            const from = this.dragging;
+            this.dragging = null;
+            this.clearDropMarks();
+            if (from === null) return;
+
+            this.draft.fields = reorderField(this.draft.fields, from, targetIndex(event));
+            this.renderFields();
+        });
+    }
+
+    private clearDropMarks(): void {
+        const blocks = this.fieldsEl?.querySelectorAll(".mfl-field-block");
+        blocks?.forEach((el) => {
+            el.removeClass("is-drop-before");
+            el.removeClass("is-drop-after");
+        });
     }
 
     private iconButton(
@@ -159,6 +250,23 @@ export class FormEditorModal extends Modal {
 
             const input = field.input;
             if (input.type !== "select" && input.type !== "multiselect") continue;
+
+            // Пустые и повторяющиеся папки-источники: пустая строка осталась
+            // от нажатия «Добавить папку», а повтор дал бы каждую заметку дважды.
+            if (input.type === "multiselect" && input.source === "notes") {
+                const extra = (input.folders ?? [])
+                    .map((folder) => folder.trim())
+                    .filter(
+                        (folder, index, all) =>
+                            folder !== "" &&
+                            folder !== input.folder.trim() &&
+                            all.indexOf(folder) === index,
+                    );
+                if (extra.length === 0) delete input.folders;
+                else input.folders = extra;
+                continue;
+            }
+
             if (input.source !== "fixed") continue;
 
             for (const option of input.options) {
