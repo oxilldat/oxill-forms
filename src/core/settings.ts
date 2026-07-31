@@ -231,7 +231,6 @@ function parseInput(raw: Record<string, unknown>): InputType | null {
         case "folder":
         case "image":
         case "file":
-        case "section":
             return { type: raw.type };
 
         case "note":
