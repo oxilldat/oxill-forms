@@ -7,33 +7,38 @@ import { fileURLToPath } from "url";
 const root = dirname(fileURLToPath(import.meta.url));
 const isProd = process.argv[2] === "production";
 
-/** Плагин ставится прямо в тестовое хранилище — правки видно сразу после Reload. */
-const VAULT_PLUGIN_DIR = join(
-    root,
-    "..",
-    "test-vault",
-    ".obsidian",
-    "plugins",
-    "modal-forms-lite",
-);
+/**
+ * Собираем в корень репозитория: именно эти три файла — main.js, manifest.json
+ * и styles.css — Obsidian и ждёт в папке плагина, и они же уходят в релиз.
+ */
+const outDir = root;
 
 /**
- * Собираем всегда в хранилище — и в watch, и в production. Так плагин там
- * никогда не отстаёт от исходников. Production дополнительно кладёт копию
- * в корень проекта: это то, что уходит в релиз.
+ * Заодно кладём сборку в хранилище для проверки, чтобы после правки хватало
+ * одного Reload. Путь задаётся переменной MFL_VAULT; без неё пробуем соседний
+ * test-vault. Копируем, только если папка плагинов там уже есть: у чужого
+ * клона хранилища нет, и создавать что-то рядом с чужим проектом нельзя.
  */
-const outDir = VAULT_PLUGIN_DIR;
-mkdirSync(outDir, { recursive: true });
+const VAULT_PLUGIN_DIR =
+    process.env.MFL_VAULT ??
+    join(root, "..", "test-vault", ".obsidian", "plugins", "modal-forms-lite");
+
+function vaultDir() {
+    return existsSync(dirname(VAULT_PLUGIN_DIR)) ? VAULT_PLUGIN_DIR : null;
+}
 
 const STATIC_FILES = ["manifest.json", "styles.css"];
 
 /** manifest.json и styles.css esbuild не трогает — копируем руками на каждой сборке. */
 function copyStatics() {
-    for (const file of STATIC_FILES) {
+    const vault = vaultDir();
+    if (!vault) return;
+
+    mkdirSync(vault, { recursive: true });
+    for (const file of [...STATIC_FILES, "main.js"]) {
         const from = join(root, file);
-        if (existsSync(from)) copyFileSync(from, join(outDir, file));
+        if (existsSync(from)) copyFileSync(from, join(vault, file));
     }
-    if (isProd) copyFileSync(join(outDir, "main.js"), join(root, "main.js"));
 }
 
 const notifyPlugin = {
@@ -47,7 +52,8 @@ const notifyPlugin = {
             if (result.errors.length) {
                 console.log(`[${stamp}] FAILED: ${result.errors.length} error(s)`);
             } else {
-                console.log(`[${stamp}] OK -> ${outDir}`);
+                const vault = vaultDir();
+                console.log(`[${stamp}] OK -> ${outDir}${vault ? ` (+ vault)` : ""}`);
             }
         });
     },
@@ -102,7 +108,7 @@ if (isProd) {
             pending = setTimeout(() => {
                 copyStatics();
                 const stamp = new Date().toLocaleTimeString("ru-RU");
-                console.log(`[${stamp}] statics copied -> ${outDir}`);
+                console.log(`[${stamp}] statics copied`);
             }, 50);
         });
     }
