@@ -10,7 +10,8 @@ updated, or with text inserted where the cursor is.
 [Русская версия документации](README.ru.md)
 
 > Written from scratch, inspired by
-> [obsidian-modal-form](https://github.com/danielo515/obsidian-modal-form).
+> [obsidian-modal-form](https://github.com/danielo515/obsidian-modal-form) —
+> thanks to its author for the idea.
 
 ## What it does
 

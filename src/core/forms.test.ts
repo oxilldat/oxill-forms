@@ -36,8 +36,8 @@ test("upsertForm добавляет новую форму", () => {
 });
 
 test("upsertForm при переименовании правит форму, а не создаёт дубль", () => {
-    // Это тот самый баг оригинального плагина: без originalName переименование
-    // добавляло вторую форму вместо правки первой.
+    // Без originalName переименование добавляло бы вторую форму вместо
+    // правки первой — ошибка тихая, поэтому и проверяется отдельно.
     const renamed: FormDefinition = { ...form("bookTwo", "Книга"), version: 1 };
     const result = upsertForm(forms, renamed, "book");
     assert.equal(result.length, 2);

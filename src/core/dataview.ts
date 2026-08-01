@@ -38,7 +38,7 @@ export function isDataviewAvailable(app: App): boolean {
 /**
  * Приводит результат запроса к обычному массиву. Dataview отдаёт свой
  * DataArray, а не настоящий массив, поэтому проверки `Array.isArray`
- * недостаточно — на ней спотыкается и оригинальный плагин.
+ * недостаточно — на ней легко споткнуться.
  */
 function toArray(value: unknown): unknown[] | null {
     if (Array.isArray(value)) return value;
