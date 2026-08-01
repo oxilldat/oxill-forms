@@ -16,7 +16,7 @@ import { FieldEditor } from "./FieldEditor";
 interface FormEditorOptions {
     form: FormDefinition;
     context: EditorContext;
-    onSave: (form: FormDefinition, originalName: string) => void;
+    onSave: (form: FormDefinition, originalName: string) => void | Promise<void>;
 }
 
 /**
@@ -317,7 +317,9 @@ export class FormEditorModal extends Modal {
 
         this.mayClose = true;
         this.close();
-        this.options.onSave(this.draft, this.originalName);
+        // Окно уже закрыто, ждать сохранения некому: обработчик волен быть
+        // асинхронным, но его промис здесь никого не интересует.
+        void this.options.onSave(this.draft, this.originalName);
     }
 
     private isDirty(): boolean {

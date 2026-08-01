@@ -360,10 +360,7 @@ export class FormListModal extends Modal {
         const actions = card.createDiv({ cls: "oxf-card-actions" });
         this.action(actions, "pencil", t("browser.editMeta"), () => this.editMeta(form));
         this.action(actions, "settings", t("browser.editFields"), () => this.editFields(form));
-        this.action(actions, "copy", t("browser.duplicate"), async () => {
-            await this.plugin.duplicateForm(form.name);
-            this.render();
-        });
+        this.action(actions, "copy", t("browser.duplicate"), () => void this.duplicateForm(form));
         this.action(actions, "clipboard-copy", t("browser.export"), () => void this.exportForm(form));
         this.action(actions, "trash-2", t("common.delete"), () => this.deleteForm(form));
     }
@@ -385,6 +382,12 @@ export class FormListModal extends Modal {
         });
         setIcon(button, icon);
         button.addEventListener("click", onClick);
+    }
+
+    /** Дубль формы. Список перерисовываем сразу: копию надо увидеть. */
+    private async duplicateForm(form: FormDefinition): Promise<void> {
+        await this.plugin.duplicateForm(form.name);
+        this.render();
     }
 
     /** Экспорт одной формы: конверт с версией плагина в буфер обмена. */

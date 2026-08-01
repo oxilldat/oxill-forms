@@ -18,10 +18,19 @@ export class DataviewError extends Error {
     }
 }
 
-/** Конструктор асинхронной функции — обычный `new Function`, но с await. */
-const AsyncFunction = Object.getPrototypeOf(async function () {
+/**
+ * Конструктор асинхронной функции — обычный `new Function`, но с await.
+ * Достать его можно только через прототип: своего имени у него нет.
+ * `getPrototypeOf` возвращает `any`, поэтому сначала сужаем результат до
+ * объекта с `constructor`, а уже потом читаем поле.
+ */
+const asyncPrototype = Object.getPrototypeOf(async function () {
     /* пусто */
-}).constructor as new (...args: string[]) => (...args: unknown[]) => Promise<unknown>;
+}) as { constructor: unknown };
+
+const AsyncFunction = asyncPrototype.constructor as new (
+    ...args: string[]
+) => (...args: unknown[]) => Promise<unknown>;
 
 interface PluginRegistry {
     plugins?: { plugins?: Record<string, { api?: unknown } | undefined> };

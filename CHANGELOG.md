@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.4 — 2026-08-01
+
+More notes from the directory review. Nothing changes for the user.
+
+- The two `eslint-disable` comments in the file name patterns now say why they
+  are there, instead of silencing the rule without a word.
+- The constructor of an async function is reached through a narrowed prototype
+  rather than through a value typed `any`.
+- Duplicating a form in the browser and saving the field editor no longer hand
+  a promise to a callback that expects nothing back.
+
 ## 0.1.3 — 2026-08-01
 
 - The line under the “Forms” heading reads as a caption again — smaller,
