@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Типы, тесты и сборка — то же, что запускается руками перед коммитом.
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+
+      # Сборка кладёт файлы в корень; проверяем, что все три на месте.
+      - name: Release files exist
+        run: test -f main.js && test -f manifest.json && test -f styles.css
+
+      # Версия в манифесте и в package.json обязана совпадать: по манифесту
+      # Obsidian решает, что обновлять, по тегу — GitHub.
+      - name: Versions agree
+        run: |
+          manifest=$(node -p "require('./manifest.json').version")
+          pkg=$(node -p "require('./package.json').version")
+          echo "manifest $manifest, package $pkg"
+          test "$manifest" = "$pkg"
+
+      # Каждая версия в versions.json должна знать свой minAppVersion.
+      - name: Manifest version is listed in versions.json
+        run: |
+          node -e "
+            const m = require('./manifest.json');
+            const v = require('./versions.json');
+            if (!v[m.version]) {
+              console.error('versions.json не знает версию ' + m.version);
+              process.exit(1);
+            }
+          "

@@ -1,0 +1,43 @@
+name: Release
+
+# Тег называется как версия, без «v»: так требует каталог Obsidian.
+on:
+  push:
+    tags: ["*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+
+      # Тег и манифест обязаны совпадать: Obsidian ищет версию из манифеста,
+      # а качает файлы из релиза с этим тегом.
+      - name: Tag matches manifest
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          manifest=$(node -p "require('./manifest.json').version")
+          echo "tag $tag, manifest $manifest"
+          test "$tag" = "$manifest"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file CHANGELOG.md \
+            main.js manifest.json styles.css
