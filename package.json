@@ -1,6 +1,6 @@
 {
     "name": "oxill-forms",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "Forms for structured input in Obsidian: fill a modal, get a note.",
     "private": true,
     "type": "module",

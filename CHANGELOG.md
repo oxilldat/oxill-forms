@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 — 2026-08-01
+
+- The line under the “Forms” heading reads as a caption again — smaller,
+  closer to the heading and without a rule under it. It had turned into a
+  settings row of its own when the settings tab became declarative.
+
 ## 0.1.2 — 2026-08-01
 
 Meeting the requirements of the Obsidian plugin directory. What the plugin

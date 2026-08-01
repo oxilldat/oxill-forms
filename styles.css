@@ -519,23 +519,34 @@
     resize: vertical;
 }
 
-/* Пояснение к разделу. У группы описания нет, поэтому это обычная строка без
-   контрола: имя пустое и скрыто, разделитель сверху убран — остаётся текст
-   подписью под заголовком. */
-.oxf-settings-group .oxf-group-note {
-    padding-bottom: 0;
+/* Пояснение к разделу. Своего описания у группы нет, а всё, что положено в
+   неё, движок рисует строкой внутри карточки — поэтому подпись притворяется
+   строкой без имени и контрола.
+
+   Вес тут не случаен: высоту строкам задаёт
+   `.setting-group .setting-item:not(.setting-item-heading)` — это (0,3,0), и
+   двух классов на перебивку не хватает. Отсюда лишний `.setting-items` в
+   селекторах: (0,4,0) выигрывает без оговорок про порядок загрузки. */
+.oxf-settings-group .setting-items .setting-item.oxf-group-note {
+    /* Сверху отступ карточки, снизу почти нет: подпись липнет не к первой
+       настройке, а к верхнему краю, как и положено подписи. */
+    padding-bottom: 4px;
 }
 
-.oxf-settings-group .oxf-group-note::before {
-    content: none;
-}
-
-.oxf-settings-group .oxf-group-note .setting-item-name {
+.oxf-settings-group .setting-items .setting-item.oxf-group-note .setting-item-name {
     display: none;
 }
 
-.oxf-settings-group .oxf-group-note .setting-item-description {
+.oxf-settings-group .setting-items .setting-item.oxf-group-note .setting-item-description {
     margin-top: 0;
+    font-size: var(--font-ui-smaller);
+}
+
+/* Разделитель движок рисует у строки сверху, и у первой строки гасит сам.
+   Значит линия под подписью — это линия следующей строки; она тут лишняя,
+   подпись относится ко всей карточке, а не к своему кусочку. */
+.oxf-settings-group .setting-items .oxf-group-note + .setting-item::before {
+    content: none;
 }
 
 /* === Окно подтверждения === */
