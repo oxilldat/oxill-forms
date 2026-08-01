@@ -307,12 +307,14 @@ test("запрос множественного выбора попадает в
 });
 
 test("негодное имя глобальной переменной заменяется привычным", () => {
-    assert.equal(parseSettings({ globalName: "Forms" }).globalName, "Forms");
+    assert.equal(parseSettings({ globalName: "OxillForms" }).globalName, "OxillForms");
     assert.equal(parseSettings({ globalName: "$mf_2" }).globalName, "$mf_2");
+    // Годное имя оставляем как есть, даже если оно отличается регистром.
+    assert.equal(parseSettings({ globalName: "forms" }).globalName, "forms");
     // С цифры, с дефисом и пустое — не имена переменных.
-    assert.equal(parseSettings({ globalName: "2mf" }).globalName, "MFL");
-    assert.equal(parseSettings({ globalName: "modal-forms" }).globalName, "MFL");
-    assert.equal(parseSettings({ globalName: "" }).globalName, "MFL");
+    assert.equal(parseSettings({ globalName: "2mf" }).globalName, "OxillForms");
+    assert.equal(parseSettings({ globalName: "my-forms" }).globalName, "OxillForms");
+    assert.equal(parseSettings({ globalName: "" }).globalName, "OxillForms");
 });
 
 test("язык читается только из известных словарей", () => {

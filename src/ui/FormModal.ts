@@ -85,8 +85,8 @@ export class FormModal extends Modal {
 
     onOpen(): void {
         const { contentEl } = this;
-        contentEl.addClass("mfl-modal");
-        contentEl.createEl("h3", { text: this.form.title, cls: "mfl-title" });
+        contentEl.addClass("oxf-modal");
+        contentEl.createEl("h3", { text: this.form.title, cls: "oxf-title" });
 
         for (const field of this.form.fields) {
             // Скрытое поле не рисуем вовсе, но значение из values сохраняем —
@@ -96,7 +96,7 @@ export class FormModal extends Modal {
         }
         this.refreshVisibility();
 
-        this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
+        this.errorEl = contentEl.createDiv({ cls: "oxf-error" });
 
         new Setting(contentEl)
             .addButton((button) => button.setButtonText(t("common.cancel")).onClick(() => this.cancel()))
@@ -166,10 +166,10 @@ export class FormModal extends Modal {
     private renderField(container: HTMLElement, field: FieldDefinition): void {
         // Каждое поле живёт в своей обёртке: под ней место для ошибки, а
         // условие показа прячет обёртку целиком вместе с этой ошибкой.
-        const wrap = container.createDiv({ cls: "mfl-field-wrap" });
+        const wrap = container.createDiv({ cls: "oxf-field-wrap" });
 
         if (field.input.type === "section") {
-            wrap.addClass("mfl-section");
+            wrap.addClass("oxf-section");
             const heading = new Setting(wrap)
                 .setName(field.label?.trim() || field.name)
                 .setHeading();
@@ -180,10 +180,10 @@ export class FormModal extends Modal {
 
         const setting = new Setting(wrap).setName(field.label?.trim() || field.name);
         if (field.description) setting.setDesc(field.description);
-        if (field.required) setting.nameEl.addClass("mfl-required");
+        if (field.required) setting.nameEl.addClass("oxf-required");
         this.conditionalRows.push({ field, el: wrap });
 
-        const errorEl = wrap.createDiv({ cls: "mfl-field-error" });
+        const errorEl = wrap.createDiv({ cls: "oxf-field-error" });
         this.rows.set(field.name, { wrap, errorEl });
 
         const preset = this.values[field.name];
@@ -379,14 +379,14 @@ export class FormModal extends Modal {
     private setFieldError(name: string, message: string): void {
         const row = this.rows.get(name);
         if (!row) return;
-        row.wrap.addClass("mfl-invalid");
+        row.wrap.addClass("oxf-invalid");
         row.errorEl.setText(message);
     }
 
     private clearFieldError(name: string): void {
         const row = this.rows.get(name);
         if (!row) return;
-        row.wrap.removeClass("mfl-invalid");
+        row.wrap.removeClass("oxf-invalid");
         row.errorEl.setText("");
     }
 
@@ -415,7 +415,7 @@ export class FormModal extends Modal {
         hint: string,
     ): void {
         if (multiline) {
-            setting.setClass("mfl-textarea");
+            setting.setClass("oxf-textarea");
             setting.addTextArea((area) => {
                 if (hint !== "") area.setPlaceholder(hint);
                 if (preset !== undefined) area.setValue(String(preset));
@@ -470,7 +470,7 @@ export class FormModal extends Modal {
         allowNew: boolean,
         preset: FieldValue | undefined,
     ): void {
-        setting.setClass("mfl-multi-row");
+        setting.setClass("oxf-multi-row");
         new MultiValueField({
             app: this.app,
             container: setting.controlEl,
@@ -492,7 +492,7 @@ export class FormModal extends Modal {
         isImage: boolean,
         preset: FieldValue | undefined,
     ): void {
-        setting.setClass("mfl-upload");
+        setting.setClass("oxf-upload");
 
         const input = field.input;
         if (input.type !== "image" && input.type !== "file") return;
@@ -503,7 +503,7 @@ export class FormModal extends Modal {
         if (isImage) picker.accept = IMAGE_ACCEPT;
         else if (allowed.length > 0) picker.accept = acceptAttribute(allowed);
 
-        const info = control.createDiv({ cls: "mfl-upload-info" });
+        const info = control.createDiv({ cls: "oxf-upload-info" });
         if (preset !== undefined) info.setText(String(preset));
 
         picker.addEventListener("change", async () => {
@@ -511,7 +511,7 @@ export class FormModal extends Modal {
             if (!file) return;
 
             if (isImage && !isAllowedImage(file.name)) {
-                info.addClass("mfl-error");
+                info.addClass("oxf-error");
                 info.setText(t("fill.imageOnly"));
                 picker.value = "";
                 return;
@@ -520,13 +520,13 @@ export class FormModal extends Modal {
             // Фильтр в системном окне обходится вводом имени руками, поэтому
             // расширение проверяем ещё раз здесь.
             if (!isAllowedExtension(file.name, allowed)) {
-                info.addClass("mfl-error");
+                info.addClass("oxf-error");
                 info.setText(t("fill.extensionsOnly", { list: formatExtensions(allowed) }));
                 picker.value = "";
                 return;
             }
 
-            info.removeClass("mfl-error");
+            info.removeClass("oxf-error");
             info.setText(t("fill.saving"));
 
             try {
@@ -547,8 +547,8 @@ export class FormModal extends Modal {
                 this.setValue(field.name, toWikiLink(path));
                 info.setText(path);
             } catch (error) {
-                console.error("[modal-forms-lite] не удалось сохранить вложение", error);
-                info.addClass("mfl-error");
+                console.error("[oxill-forms] не удалось сохранить вложение", error);
+                info.addClass("oxf-error");
                 info.setText(t("fill.saveFailed"));
                 picker.value = "";
             }
@@ -580,7 +580,7 @@ export class FormModal extends Modal {
 
     private refreshVisibility(): void {
         for (const row of this.conditionalRows) {
-            row.el.toggleClass("mfl-hidden", !this.isShown(row.field));
+            row.el.toggleClass("oxf-hidden", !this.isShown(row.field));
         }
     }
 
@@ -712,7 +712,7 @@ export class FormModal extends Modal {
             try {
                 await this.app.fileManager.trashFile(file);
             } catch (error) {
-                console.error("[modal-forms-lite] не удалось убрать вложение", path, error);
+                console.error("[oxill-forms] не удалось убрать вложение", path, error);
             }
         }
     }

@@ -7,7 +7,7 @@ import type { FormDefinition } from "./types";
  * при открытии в старой.
  */
 
-export const EXCHANGE_MARKER = "modal-forms-lite";
+export const EXCHANGE_MARKER = "forms";
 
 export interface FormBundle {
     plugin: typeof EXCHANGE_MARKER;

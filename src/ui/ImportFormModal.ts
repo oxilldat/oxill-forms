@@ -35,12 +35,12 @@ export class ImportFormModal extends Modal {
 
     onOpen(): void {
         const { contentEl, modalEl } = this;
-        modalEl.addClass("mfl-wide-modal");
-        contentEl.addClass("mfl-modal");
-        contentEl.createEl("h3", { text: t("import.title"), cls: "mfl-title" });
+        modalEl.addClass("oxf-wide-modal");
+        contentEl.addClass("oxf-modal");
+        contentEl.createEl("h3", { text: t("import.title"), cls: "oxf-title" });
 
         new Setting(contentEl)
-            .setClass("mfl-textarea")
+            .setClass("oxf-textarea")
             .setName(t("import.json"))
             .setDesc(t("import.jsonDesc"))
             .addTextArea((area) => {
@@ -56,7 +56,7 @@ export class ImportFormModal extends Modal {
             });
 
         this.warningEl = contentEl.createDiv();
-        this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
+        this.errorEl = contentEl.createDiv({ cls: "oxf-error" });
 
         new Setting(contentEl)
             .addButton((button) => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
@@ -126,7 +126,7 @@ export class ImportFormModal extends Modal {
 
     private showVersionWarning(version: string): void {
         this.warningEl?.createDiv({
-            cls: "mfl-warning",
+            cls: "oxf-warning",
             text: t("import.versionWarn", { version, current: this.options.pluginVersion }),
         });
     }
@@ -136,13 +136,13 @@ export class ImportFormModal extends Modal {
         if (!box) return;
 
         box.createDiv({
-            cls: "mfl-warning",
+            cls: "oxf-warning",
             text: t("import.codeWarn"),
         });
 
         for (const item of code) {
-            box.createDiv({ cls: "mfl-code-label", text: item.field });
-            box.createEl("pre", { cls: "mfl-code", text: item.query });
+            box.createDiv({ cls: "oxf-code-label", text: item.field });
+            box.createEl("pre", { cls: "oxf-code", text: item.query });
         }
     }
 

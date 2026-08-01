@@ -61,19 +61,19 @@ export class FormEditorModal extends Modal {
 
     onOpen(): void {
         const { contentEl, modalEl } = this;
-        modalEl.addClass("mfl-wide-modal");
-        contentEl.addClass("mfl-modal");
+        modalEl.addClass("oxf-wide-modal");
+        contentEl.addClass("oxf-modal");
 
-        contentEl.createEl("h3", { text: t("editor.title", { title: this.draft.title }), cls: "mfl-title" });
+        contentEl.createEl("h3", { text: t("editor.title", { title: this.draft.title }), cls: "oxf-title" });
 
-        this.fieldsEl = contentEl.createDiv({ cls: "mfl-fields" });
+        this.fieldsEl = contentEl.createDiv({ cls: "oxf-fields" });
         this.renderFields();
 
         new Setting(contentEl).addButton((button) =>
             button.setButtonText(t("editor.addField")).onClick(() => this.addField()),
         );
 
-        this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
+        this.errorEl = contentEl.createDiv({ cls: "oxf-error" });
 
         new Setting(contentEl)
             .addButton((button) => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
@@ -102,8 +102,8 @@ export class FormEditorModal extends Modal {
     }
 
     private renderRow(container: HTMLElement, field: FieldDefinition, index: number): void {
-        const block = container.createDiv({ cls: "mfl-field-block" });
-        const header = block.createDiv({ cls: "mfl-field-header" });
+        const block = container.createDiv({ cls: "oxf-field-block" });
+        const header = block.createDiv({ cls: "oxf-field-header" });
 
         // Место, куда встанет поле при броске. Полоса рисуется поверх стыка,
         // поэтому список не дёргается, пока водишь мышью.
@@ -112,7 +112,7 @@ export class FormEditorModal extends Modal {
         // Тащим только за ручку: развёрнутое поле занимает пол-окна, и
         // перетаскивание всего блока мешало бы просто кликать по настройкам.
         const handle = header.createDiv({
-            cls: "mfl-field-handle",
+            cls: "oxf-field-handle",
             attr: { "aria-label": t("editor.drag"), draggable: "true" },
         });
         setIcon(handle, "grip-vertical");
@@ -144,9 +144,9 @@ export class FormEditorModal extends Modal {
             this.renderFields();
         });
 
-        const caption = header.createDiv({ cls: "mfl-field-caption" });
+        const caption = header.createDiv({ cls: "oxf-field-caption" });
         caption.createSpan({ text: field.label?.trim() || field.name });
-        caption.createSpan({ cls: "mfl-field-type", text: inputTypeLabel(field.input.type) });
+        caption.createSpan({ cls: "oxf-field-type", text: inputTypeLabel(field.input.type) });
         caption.addEventListener("click", () => chevron.click());
 
         this.iconButton(header, "arrow-up", t("editor.up"), () => {
@@ -173,7 +173,7 @@ export class FormEditorModal extends Modal {
 
         if (!isOpen) return;
 
-        const body = block.createDiv({ cls: "mfl-field-body" });
+        const body = block.createDiv({ cls: "oxf-field-body" });
         new FieldEditor(this.app, {
             field,
             otherFields: this.draft.fields.filter((other) => other !== field),
@@ -222,7 +222,7 @@ export class FormEditorModal extends Modal {
     }
 
     private clearDropMarks(): void {
-        const blocks = this.fieldsEl?.querySelectorAll(".mfl-field-block");
+        const blocks = this.fieldsEl?.querySelectorAll(".oxf-field-block");
         blocks?.forEach((el) => {
             el.removeClass("is-drop-before");
             el.removeClass("is-drop-after");

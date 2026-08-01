@@ -11,7 +11,7 @@ import {
 import { t, tp } from "../i18n";
 import { isValidName } from "../core/naming";
 import type { FormDefinition } from "../core/types";
-import type ModalFormsLitePlugin from "../main";
+import type FormsPlugin from "../main";
 import { ConfirmModal } from "./ConfirmModal";
 import { FormEditorModal } from "./FormEditorModal";
 import { FormMetaModal } from "./FormMetaModal";
@@ -38,21 +38,21 @@ export class FormListModal extends Modal {
 
     constructor(
         app: App,
-        private plugin: ModalFormsLitePlugin,
+        private plugin: FormsPlugin,
     ) {
         super(app);
     }
 
     onOpen(): void {
         const { contentEl, modalEl } = this;
-        modalEl.addClass("mfl-wide-modal");
-        contentEl.addClass("mfl-modal");
+        modalEl.addClass("oxf-wide-modal");
+        contentEl.addClass("oxf-modal");
 
         // Заголовка у окна нет намеренно: колонка папок и карточки форм и так
         // говорят, куда попал, а строка «Формы» только отъедала высоту.
-        const browser = contentEl.createDiv({ cls: "mfl-browser" });
-        this.foldersEl = browser.createDiv({ cls: "mfl-folders" });
-        this.cardsEl = browser.createDiv({ cls: "mfl-cards" });
+        const browser = contentEl.createDiv({ cls: "oxf-browser" });
+        this.foldersEl = browser.createDiv({ cls: "oxf-folders" });
+        this.cardsEl = browser.createDiv({ cls: "oxf-cards" });
 
         this.render();
     }
@@ -89,8 +89,8 @@ export class FormListModal extends Modal {
         if (!container) return;
         container.empty();
 
-        const head = container.createDiv({ cls: "mfl-folders-head" });
-        head.createDiv({ cls: "mfl-folders-title", text: t("browser.folders") });
+        const head = container.createDiv({ cls: "oxf-folders-head" });
+        head.createDiv({ cls: "oxf-folders-title", text: t("browser.folders") });
         const add = head.createDiv({
             cls: "clickable-icon",
             attr: { "aria-label": t("browser.newFolder") },
@@ -107,7 +107,7 @@ export class FormListModal extends Modal {
             this.renderFolders();
         });
 
-        const list = container.createDiv({ cls: "mfl-folders-list" });
+        const list = container.createDiv({ cls: "oxf-folders-list" });
         if (!this.allFormsHidden) {
             this.renderFolderItem(list, null, t("browser.allForms"), "layers", this.forms.length);
         }
@@ -132,13 +132,13 @@ export class FormListModal extends Modal {
         icon: string,
         count: number,
     ): void {
-        const item = container.createDiv({ cls: "mfl-folder" });
+        const item = container.createDiv({ cls: "oxf-folder" });
         if (this.selected === value) item.addClass("is-active");
 
-        const iconBox = item.createDiv({ cls: "mfl-folder-icon" });
+        const iconBox = item.createDiv({ cls: "oxf-folder-icon" });
         setIcon(iconBox, icon);
-        item.createDiv({ cls: "mfl-folder-name", text: label });
-        item.createDiv({ cls: "mfl-folder-count", text: String(count) });
+        item.createDiv({ cls: "oxf-folder-name", text: label });
+        item.createDiv({ cls: "oxf-folder-count", text: String(count) });
 
         // Крестик у каждой папки. «Все формы» и «Без папки» не папки, а
         // способ смотреть на список — убирать там нечего.
@@ -148,7 +148,7 @@ export class FormListModal extends Modal {
             item.addClass("is-forgettable");
             const empty = count === 0;
             const forget = item.createDiv({
-                cls: "clickable-icon mfl-folder-forget",
+                cls: "clickable-icon oxf-folder-forget",
                 attr: { "aria-label": empty ? t("browser.forgetFolder") : t("browser.deleteFolder") },
             });
             setIcon(forget, "x");
@@ -202,12 +202,12 @@ export class FormListModal extends Modal {
 
     /** Строка ввода вместо окна: папка нужна на один раз и сразу. */
     private renderNewFolder(container: HTMLElement): void {
-        const row = container.createDiv({ cls: "mfl-folder mfl-folder-new" });
-        const iconBox = row.createDiv({ cls: "mfl-folder-icon" });
+        const row = container.createDiv({ cls: "oxf-folder oxf-folder-new" });
+        const iconBox = row.createDiv({ cls: "oxf-folder-icon" });
         setIcon(iconBox, "folder-plus");
 
         const input = row.createEl("input", {
-            cls: "mfl-folder-input",
+            cls: "oxf-folder-input",
             attr: { type: "text", placeholder: t("browser.folderName") },
         });
         this.folderInput = input;
@@ -264,7 +264,7 @@ export class FormListModal extends Modal {
         const forms = formsInFolder(this.forms, this.selected);
         if (forms.length === 0) {
             container.createDiv({
-                cls: "mfl-cards-empty",
+                cls: "oxf-cards-empty",
                 text:
                     this.selected === null
                         ? t("browser.empty")
@@ -319,7 +319,7 @@ export class FormListModal extends Modal {
     }
 
     private renderCard(container: HTMLElement, form: FormDefinition): void {
-        const card = container.createDiv({ cls: "mfl-card", attr: { draggable: "true" } });
+        const card = container.createDiv({ cls: "oxf-card", attr: { draggable: "true" } });
 
         card.addEventListener("dragstart", (event) => {
             this.dragging = form.name;
@@ -335,29 +335,29 @@ export class FormListModal extends Modal {
             card.removeClass("is-dragging");
         });
 
-        const head = card.createDiv({ cls: "mfl-card-head" });
-        const iconBox = head.createDiv({ cls: "mfl-card-icon" });
+        const head = card.createDiv({ cls: "oxf-card-head" });
+        const iconBox = head.createDiv({ cls: "oxf-card-icon" });
         setIcon(iconBox, form.icon?.trim() || DEFAULT_FORM_ICON);
 
-        const text = head.createDiv({ cls: "mfl-card-text" });
-        text.createDiv({ cls: "mfl-card-title", text: form.title });
+        const text = head.createDiv({ cls: "oxf-card-text" });
+        text.createDiv({ cls: "oxf-card-title", text: form.title });
         text.createDiv({
-            cls: "mfl-card-meta",
+            cls: "oxf-card-meta",
             text: `${form.name} · ${tp("browser.fields", form.fields.length)}`,
         });
 
         if (!isValidName(form.name)) {
             text.createDiv({
-                cls: "mfl-warning",
+                cls: "oxf-warning",
                 text: t("browser.badName"),
             });
         }
 
-        const marks = head.createDiv({ cls: "mfl-card-marks" });
+        const marks = head.createDiv({ cls: "oxf-card-marks" });
         if (form.template) this.mark(marks, "file-text", t("browser.hasTemplate"));
         if (form.command?.enabled) this.mark(marks, "terminal", t("browser.hasCommand"));
 
-        const actions = card.createDiv({ cls: "mfl-card-actions" });
+        const actions = card.createDiv({ cls: "oxf-card-actions" });
         this.action(actions, "pencil", t("browser.editMeta"), () => this.editMeta(form));
         this.action(actions, "settings", t("browser.editFields"), () => this.editFields(form));
         this.action(actions, "copy", t("browser.duplicate"), async () => {
@@ -369,7 +369,7 @@ export class FormListModal extends Modal {
     }
 
     private mark(container: HTMLElement, icon: string, tooltip: string): void {
-        const box = container.createDiv({ cls: "mfl-card-mark", attr: { "aria-label": tooltip } });
+        const box = container.createDiv({ cls: "oxf-card-mark", attr: { "aria-label": tooltip } });
         setIcon(box, icon);
     }
 
@@ -395,7 +395,7 @@ export class FormListModal extends Modal {
             );
             new Notice(t("browser.exported", { title: form.title }));
         } catch (error) {
-            console.error("[modal-forms-lite] не удалось скопировать форму", error);
+            console.error("[oxill-forms] не удалось скопировать форму", error);
             new Notice(t("browser.clipboardFailed"));
         }
     }

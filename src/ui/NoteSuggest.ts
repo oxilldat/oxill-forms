@@ -34,6 +34,6 @@ export class NoteSuggest extends AbstractInputSuggest<TFile> {
 
     renderSuggestion(file: TFile, el: HTMLElement): void {
         el.createDiv({ text: file.basename });
-        el.createDiv({ cls: "mfl-suggest-path", text: file.path });
+        el.createDiv({ cls: "oxf-suggest-path", text: file.path });
     }
 }

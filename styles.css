@@ -1,28 +1,28 @@
-/* Modal Forms Lite */
+/* Forms */
 
-.mfl-modal .mfl-title {
+.oxf-modal .oxf-title {
     margin-top: 0;
 }
 
 /* Обязательное поле помечаем звёздочкой — отдельная колонка ради этого
    не нужна, а без пометки правило видно только после ошибки. */
-.mfl-required::after {
+.oxf-required::after {
     content: " *";
     color: var(--text-accent);
 }
 
-.mfl-textarea .setting-item-control {
+.oxf-textarea .setting-item-control {
     flex: 1 1 60%;
 }
 
-.mfl-textarea textarea {
+.oxf-textarea textarea {
     width: 100%;
     min-height: 5rem;
 }
 
 /* === Список форм: папки слева, карточки справа === */
 
-.mfl-browser {
+.oxf-browser {
     display: flex;
     gap: 0.75rem;
     align-items: stretch;
@@ -30,7 +30,7 @@
     max-height: 60vh;
 }
 
-.mfl-folders {
+.oxf-folders {
     flex: 0 0 12rem;
     display: flex;
     flex-direction: column;
@@ -41,14 +41,14 @@
 
 /* Шапка колонки: подпись и кнопка новой папки. Прокручивается только
    список под ней — кнопка нужна на месте всегда. */
-.mfl-folders-head {
+.oxf-folders-head {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     padding: 0 0.25rem 0.35rem 0.5rem;
 }
 
-.mfl-folders-title {
+.oxf-folders-title {
     flex: 1;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
@@ -56,14 +56,14 @@
     letter-spacing: 0.04em;
 }
 
-.mfl-folders-list {
+.oxf-folders-list {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
     overflow-y: auto;
 }
 
-.mfl-folder {
+.oxf-folder {
     position: relative;
     display: flex;
     align-items: center;
@@ -75,11 +75,11 @@
     box-shadow: inset 0 0 0 0 transparent;
 }
 
-.mfl-folder:hover {
+.oxf-folder:hover {
     background-color: var(--background-modifier-hover);
 }
 
-.mfl-folder.is-active {
+.oxf-folder.is-active {
     background-color: var(--background-modifier-active-hover);
 }
 
@@ -87,7 +87,7 @@
    потоке он сдвигал бы счётчик влево, и ноль пустой папки стоял бы не на
    той же правой оси, что остальные числа. Размер задан явно — со своими
    отступами кнопка была бы выше строки списка. */
-.mfl-folder-forget {
+.oxf-folder-forget {
     position: absolute;
     right: 0.4rem;
     top: 50%;
@@ -98,22 +98,22 @@
     padding: 0;
 }
 
-.mfl-folder-forget .svg-icon {
+.oxf-folder-forget .svg-icon {
     width: 14px;
     height: 14px;
 }
 
-.mfl-folder:hover .mfl-folder-forget {
+.oxf-folder:hover .oxf-folder-forget {
     opacity: 1;
 }
 
-.mfl-folder.is-forgettable:hover .mfl-folder-count {
+.oxf-folder.is-forgettable:hover .oxf-folder-count {
     opacity: 0;
 }
 
 /* Строка ввода названия новой папки: та же строка списка, только с полем
    вместо подписи — чтобы папка появлялась там же, где потом будет жить. */
-.mfl-folder-new {
+.oxf-folder-new {
     cursor: default;
 }
 
@@ -121,7 +121,7 @@
    рамку, фон и высоту правилом с весом (0,1,1) — одного класса не хватает.
    Поле должно быть неотличимо от подписи папки, иначе строка ввода прыгает
    по высоте относительно соседних. */
-.mfl-folder .mfl-folder-input {
+.oxf-folder .oxf-folder-input {
     flex: 1;
     min-width: 0;
     height: auto;
@@ -132,28 +132,28 @@
     line-height: inherit;
 }
 
-.mfl-folder .mfl-folder-input:focus {
+.oxf-folder .oxf-folder-input:focus {
     box-shadow: none;
 }
 
-.mfl-folder-icon {
+.oxf-folder-icon {
     display: flex;
     color: var(--text-muted);
 }
 
-.mfl-folder-name {
+.oxf-folder-name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.mfl-folder-count {
+.oxf-folder-count {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
 
-.mfl-cards {
+.oxf-cards {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -162,87 +162,87 @@
     min-width: 0;
 }
 
-.mfl-cards-empty {
+.oxf-cards-empty {
     color: var(--text-muted);
     padding: 1.5rem 0;
     text-align: center;
 }
 
-.mfl-card {
+.oxf-card {
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-m);
     background-color: var(--background-secondary);
     padding: 0.5rem 0.6rem;
 }
 
-.mfl-card:hover {
+.oxf-card:hover {
     border-color: var(--background-modifier-border-hover);
 }
 
 /* === Перетаскивание форм по папкам === */
 
-.mfl-card[draggable="true"] {
+.oxf-card[draggable="true"] {
     cursor: grab;
 }
 
 /* Карточку под курсором приглушаем, а не прячем: место в списке должно
    остаться, иначе список дёргается на каждое движение мыши. */
-.mfl-card.is-dragging {
+.oxf-card.is-dragging {
     opacity: 0.4;
 }
 
 /* Цель подсвечиваем акцентом: рамкой внутрь, чтобы ничего не сдвинулось. */
-.mfl-folder.is-drop-target {
+.oxf-folder.is-drop-target {
     background-color: var(--background-modifier-hover);
     box-shadow: inset 0 0 0 2px var(--interactive-accent);
 }
 
-.mfl-cards.is-drop-target {
+.oxf-cards.is-drop-target {
     border-radius: var(--radius-m);
     box-shadow: inset 0 0 0 2px var(--interactive-accent);
 }
 
-.mfl-card-head {
+.oxf-card-head {
     display: flex;
     align-items: flex-start;
     gap: 0.5rem;
 }
 
-.mfl-card-icon {
+.oxf-card-icon {
     display: flex;
     padding-top: 0.15rem;
     color: var(--text-accent);
 }
 
-.mfl-card-text {
+.oxf-card-text {
     flex: 1;
     min-width: 0;
 }
 
-.mfl-card-title {
+.oxf-card-title {
     font-weight: var(--font-medium);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.mfl-card-meta {
+.oxf-card-meta {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
 
-.mfl-card-marks {
+.oxf-card-marks {
     display: flex;
     gap: 0.25rem;
     color: var(--text-muted);
 }
 
-.mfl-card-marks .svg-icon {
+.oxf-card-marks .svg-icon {
     width: 0.9em;
     height: 0.9em;
 }
 
-.mfl-card-actions {
+.oxf-card-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.1rem;
@@ -251,13 +251,13 @@
 
 
 /* Кнопка выбора значка: сам значок и его имя. */
-.mfl-icon-button {
+.oxf-icon-button {
     display: inline-flex;
     align-items: center;
     gap: 8px;
 }
 
-.mfl-icon-badge {
+.oxf-icon-badge {
     display: inline-flex;
     color: var(--text-muted);
 }
@@ -268,7 +268,7 @@
    настроек и модалка не отпускают фокус наружу, и снаружи поле поиска нельзя
    было бы выбрать. Координаты плагин пересчитывает сам. */
 
-.mfl-icon-pop {
+.oxf-icon-pop {
     position: fixed;
     z-index: var(--layer-menu, 1000);
     width: 320px;
@@ -279,12 +279,12 @@
     box-shadow: var(--shadow-s);
 }
 
-.mfl-icon-search {
+.oxf-icon-search {
     width: 100%;
     margin-bottom: 8px;
 }
 
-.mfl-icon-grid {
+.oxf-icon-grid {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     gap: 2px;
@@ -292,7 +292,7 @@
     overflow-y: auto;
 }
 
-.mfl-icon-cell {
+.oxf-icon-cell {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -303,22 +303,22 @@
     transition: background-color 0.1s ease, color 0.1s ease;
 }
 
-.mfl-icon-cell:hover {
+.oxf-icon-cell:hover {
     background-color: var(--background-modifier-hover);
     color: var(--text-normal);
 }
 
-.mfl-icon-cell.is-active {
+.oxf-icon-cell.is-active {
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
 }
 
-.mfl-icon-cell svg {
+.oxf-icon-cell svg {
     width: 16px;
     height: 16px;
 }
 
-.mfl-icon-note {
+.oxf-icon-note {
     margin-top: 6px;
     font-size: var(--font-ui-smaller);
     color: var(--text-faint);
@@ -326,14 +326,14 @@
 }
 
 /* Подстановки, доступные в шаблоне: вставляются кликом. */
-.mfl-hints {
+.oxf-hints {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
     padding: 0.2rem 0 0.5rem;
 }
 
-.mfl-hint {
+.oxf-hint {
     padding: 0.1rem 0.4rem;
     border-radius: var(--radius-s);
     background-color: var(--background-modifier-hover);
@@ -342,24 +342,24 @@
     cursor: pointer;
 }
 
-.mfl-hint:hover {
+.oxf-hint:hover {
     background-color: var(--background-modifier-active-hover);
 }
 
-.mfl-template-input {
+.oxf-template-input {
     width: 100%;
     font-family: var(--font-monospace);
     font-size: var(--font-ui-smaller);
 }
 
 /* Показ чужого кода перед импортом формы. */
-.mfl-code-label {
+.oxf-code-label {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
     padding-top: 0.5rem;
 }
 
-.mfl-code {
+.oxf-code {
     margin: 0.2rem 0 0;
     padding: 0.5rem;
     border-radius: var(--radius-s);
@@ -372,47 +372,47 @@
 
 /* === Поля в форме заполнения === */
 
-.mfl-field-wrap .setting-item {
+.oxf-field-wrap .setting-item {
     border-top: none;
 }
 
 /* Ошибка живёт под своим полем, а не общей строкой внизу окна. */
-.mfl-field-error {
+.oxf-field-error {
     color: var(--text-error);
     font-size: var(--font-ui-smaller);
     padding: 0 0 0.35rem;
 }
 
-.mfl-field-error:empty {
+.oxf-field-error:empty {
     display: none;
 }
 
-.mfl-invalid {
+.oxf-invalid {
     border-left: 2px solid var(--text-error);
     padding-left: 0.5rem;
     margin-left: -0.5rem;
     border-radius: var(--radius-s);
 }
 
-.mfl-invalid input,
-.mfl-invalid textarea,
-.mfl-invalid select {
+.oxf-invalid input,
+.oxf-invalid textarea,
+.oxf-invalid select {
     border-color: var(--text-error);
 }
 
 /* Раздел: заголовок группы полей внутри формы. */
-.mfl-section .setting-item {
+.oxf-section .setting-item {
     padding-bottom: 0.2rem;
     border-top: 1px solid var(--background-modifier-border);
 }
 
-.mfl-section:first-child .setting-item {
+.oxf-section:first-child .setting-item {
     border-top: none;
     padding-top: 0;
 }
 
 /* Поле, скрытое невыполненным условием. */
-.mfl-hidden {
+.oxf-hidden {
     display: none;
 }
 
@@ -424,7 +424,7 @@
    контролов здесь нет намеренно: поля и списки в окне должны быть той же
    ширины, что во вкладке настроек. */
 
-.mfl-meta-modal {
+.oxf-meta-modal {
     width: min(680px, 92vw);
 }
 
@@ -440,7 +440,7 @@
    их считает движок. По ним же он выравнивает заголовок снаружи карточки,
    так что текст внутри и снаружи стоит на одной вертикали. */
 
-.mfl-settings-group {
+.oxf-settings-group {
     --setting-items-background: var(--background-secondary);
     --setting-items-padding-x: 16px;
     --setting-items-padding-y: 14px;
@@ -451,17 +451,17 @@
 }
 
 /* Зазор между секциями: у Obsidian между группами 24px, нам нужен воздух. */
-.mfl-settings-group + .mfl-settings-group {
+.oxf-settings-group + .oxf-settings-group {
     margin-top: 32px;
 }
 
 /* Заголовок читается как подпись своей карточки и стоит к ней ближе, чем
    к предыдущей секции. */
-.mfl-settings-group .setting-item-heading {
+.oxf-settings-group .setting-item-heading {
     margin-bottom: 8px;
 }
 
-.mfl-settings-group .setting-item {
+.oxf-settings-group .setting-item {
     /* Ключевое: при описании в две строки строка растёт симметрично, а
        контрол остаётся по центру. При flex-start он прилипал бы к верху. */
     align-items: center;
@@ -469,22 +469,22 @@
     gap: 24px;
 }
 
-.mfl-settings-group .setting-item-info {
+.oxf-settings-group .setting-item-info {
     margin-right: 0;
 }
 
-.mfl-settings-group .setting-item-name {
+.oxf-settings-group .setting-item-name {
     font-weight: 500;
 }
 
-.mfl-settings-group .setting-item-description {
+.oxf-settings-group .setting-item-description {
     line-height: 1.4;
     margin-top: 2px;
 }
 
 /* Контрол не сжимается и стоит по правому краю: у всех строк секции
    единая правая ось. */
-.mfl-settings-group .setting-item-control {
+.oxf-settings-group .setting-item-control {
     flex-shrink: 0;
     justify-content: flex-end;
     gap: 8px;
@@ -492,7 +492,7 @@
 
 /* Выпадающий список по ширине содержимого, а не во всю колонку: растянутый
    селект с коротким значением выглядит пустым. */
-.mfl-settings-group .setting-item-control select {
+.oxf-settings-group .setting-item-control select {
     flex: 0 0 auto;
     width: auto;
 }
@@ -500,46 +500,46 @@
 /* Отступы есть только у строк настроек. Поэтому всё, что положено в карточку
    напрямую, повторяет те же отступы, иначе прижималось бы к самому краю и не
    выравнивалось ни с чем. */
-.mfl-settings-group .mfl-hints {
+.oxf-settings-group .oxf-hints {
     padding: 14px var(--setting-items-padding-x) 0;
 }
 
 /* Разделитель движок рисует у каждой строки сверху. Строке под плашками он
    не нужен: подстановки и поле шаблона — одна мысль. */
-.mfl-settings-group .setting-items .mfl-hints + .setting-item::before {
+.oxf-settings-group .setting-items .oxf-hints + .setting-item::before {
     content: none;
 }
 
 /* Поле шаблона лежит в карточке напрямую, без строки настроек: подписи у
    него нет, и половина ширины под неё не нужна. */
-.mfl-settings-group .mfl-template-input {
+.oxf-settings-group .oxf-template-input {
     display: block;
     width: calc(100% - var(--setting-items-padding-x) * 2);
     margin: 0.5rem var(--setting-items-padding-x) var(--setting-items-padding-x);
     resize: vertical;
 }
 
-.mfl-setting-disabled .setting-item-name {
+.oxf-setting-disabled .setting-item-name {
     color: var(--text-muted);
 }
 
 /* === Окно подтверждения === */
 
-.mfl-confirm-modal {
+.oxf-confirm-modal {
     width: min(440px, 92vw);
 }
 
-.mfl-confirm-head {
+.oxf-confirm-head {
     display: flex;
     align-items: center;
     gap: 0.6rem;
 }
 
-.mfl-confirm-head .mfl-title {
+.oxf-confirm-head .oxf-title {
     margin-bottom: 0;
 }
 
-.mfl-confirm-icon {
+.oxf-confirm-icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -550,7 +550,7 @@
     background-color: var(--background-modifier-hover);
 }
 
-.mfl-confirm-text {
+.oxf-confirm-text {
     color: var(--text-muted);
     padding: 0.75rem 0 0.25rem;
     line-height: var(--line-height-tight);
@@ -558,28 +558,28 @@
 
 /* === Множественный выбор и теги === */
 
-.mfl-multi-row .setting-item-control {
+.oxf-multi-row .setting-item-control {
     flex: 1 1 55%;
 }
 
-.mfl-multi {
+.oxf-multi {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
     width: 100%;
 }
 
-.mfl-chips {
+.oxf-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
 }
 
-.mfl-chips:empty {
+.oxf-chips:empty {
     display: none;
 }
 
-.mfl-chip {
+.oxf-chip {
     display: flex;
     align-items: center;
     gap: 0.2rem;
@@ -589,49 +589,49 @@
     font-size: var(--font-ui-smaller);
 }
 
-.mfl-chip-remove {
+.oxf-chip-remove {
     display: flex;
     align-items: center;
     cursor: pointer;
     color: var(--text-muted);
 }
 
-.mfl-chip-remove:hover {
+.oxf-chip-remove:hover {
     color: var(--text-error);
 }
 
-.mfl-chip-remove .svg-icon {
+.oxf-chip-remove .svg-icon {
     width: 0.85em;
     height: 0.85em;
 }
 
-.mfl-multi-input {
+.oxf-multi-input {
     width: 100%;
 }
 
-.mfl-upload .setting-item-control {
+.oxf-upload .setting-item-control {
     flex-direction: column;
     align-items: flex-end;
     gap: 0.35rem;
 }
 
-.mfl-upload input[type="file"] {
+.oxf-upload input[type="file"] {
     max-width: 100%;
 }
 
-.mfl-upload-info {
+.oxf-upload-info {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
     word-break: break-all;
     text-align: right;
 }
 
-.mfl-suggest-path {
+.oxf-suggest-path {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
 
-.mfl-error {
+.oxf-error {
     color: var(--text-error);
     font-size: var(--font-ui-smaller);
     min-height: 1.2em;
@@ -640,11 +640,11 @@
 
 /* === Редактор формы === */
 
-.mfl-wide-modal {
+.oxf-wide-modal {
     width: min(720px, 92vw);
 }
 
-.mfl-fields {
+.oxf-fields {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -655,17 +655,17 @@
 /* Блок поля — рамка без заливки: внутри лежат карточки настроек, и на
    одинаковом фоне они были бы не видны. Заливка только у свёрнутого блока,
    где никаких карточек нет и строка должна читаться как объект. */
-.mfl-field-block {
+.oxf-field-block {
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-m);
     overflow: hidden;
 }
 
-.mfl-field-block:not(.is-open) {
+.oxf-field-block:not(.is-open) {
     background-color: var(--background-secondary);
 }
 
-.mfl-field-header {
+.oxf-field-header {
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -674,30 +674,30 @@
 
 /* Ручка перетаскивания. Тащим только за неё: развёрнутое поле занимает
    пол-окна, и перетаскивание всего блока мешало бы кликать по настройкам. */
-.mfl-field-handle {
+.oxf-field-handle {
     display: flex;
     align-items: center;
     color: var(--text-faint);
     cursor: grab;
 }
 
-.mfl-field-handle:hover {
+.oxf-field-handle:hover {
     color: var(--text-muted);
 }
 
-.mfl-field-block.is-dragging {
+.oxf-field-block.is-dragging {
     opacity: 0.4;
 }
 
 /* Место броска показываем полосой поверх стыка: вставлять реальный отступ
    значило бы дёргать список на каждое движение мыши. */
-.mfl-field-block.is-drop-before,
-.mfl-field-block.is-drop-after {
+.oxf-field-block.is-drop-before,
+.oxf-field-block.is-drop-after {
     position: relative;
 }
 
-.mfl-field-block.is-drop-before::after,
-.mfl-field-block.is-drop-after::after {
+.oxf-field-block.is-drop-before::after,
+.oxf-field-block.is-drop-after::after {
     content: "";
     position: absolute;
     left: 0;
@@ -707,11 +707,11 @@
     pointer-events: none;
 }
 
-.mfl-field-block.is-drop-before::after {
+.oxf-field-block.is-drop-before::after {
     top: -1px;
 }
 
-.mfl-field-block.is-drop-after::after {
+.oxf-field-block.is-drop-after::after {
     bottom: -1px;
 }
 
@@ -721,30 +721,30 @@
 /* Тело поля и его перерисовываемые обёртки — одна стопка карточек: зазор
    держит gap, а не отступы самих карточек, иначе на стыке обёрток он
    складывался бы из двух чисел. */
-.mfl-field-body,
-.mfl-stack {
+.oxf-field-body,
+.oxf-stack {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.mfl-field-body {
+.oxf-field-body {
     padding: 12px;
     border-top: 1px solid var(--background-modifier-border);
     background-color: var(--background-primary);
 }
 
 /* Пустая обёртка (условие показа у скрытого поля) не должна давать зазор. */
-.mfl-stack:empty {
+.oxf-stack:empty {
     display: none;
 }
 
-.mfl-field-body .mfl-settings-group + .mfl-settings-group,
-.mfl-stack .mfl-settings-group + .mfl-settings-group {
+.oxf-field-body .oxf-settings-group + .oxf-settings-group,
+.oxf-stack .oxf-settings-group + .oxf-settings-group {
     margin-top: 0;
 }
 
-.mfl-field-caption {
+.oxf-field-caption {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
@@ -753,7 +753,7 @@
     overflow: hidden;
 }
 
-.mfl-field-type {
+.oxf-field-type {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
@@ -764,16 +764,16 @@
 /* Селектор трёхчастный не для красоты: отступы строкам задаёт правило
    движка `.setting-group .setting-item:not(...)` весом (0,3,0), и перебить
    его можно только таким же весом. */
-.mfl-settings-group .mfl-options .setting-item {
+.oxf-settings-group .oxf-options .setting-item {
     padding-top: 4px;
     padding-bottom: 4px;
 }
 
-.mfl-settings-group .mfl-options .setting-item::before {
+.oxf-settings-group .oxf-options .setting-item::before {
     content: none;
 }
 
-.mfl-warning {
+.oxf-warning {
     color: var(--text-warning);
     padding-top: 0.2rem;
 }

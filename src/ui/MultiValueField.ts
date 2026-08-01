@@ -40,10 +40,10 @@ export class MultiValueField {
         this.values = [...options.initial];
         this.known = Array.isArray(options.candidates) ? options.candidates : [];
 
-        const root = options.container.createDiv({ cls: "mfl-multi" });
-        this.chipsEl = root.createDiv({ cls: "mfl-chips" });
+        const root = options.container.createDiv({ cls: "oxf-multi" });
+        this.chipsEl = root.createDiv({ cls: "oxf-chips" });
 
-        const input = root.createEl("input", { type: "text", cls: "mfl-multi-input" });
+        const input = root.createEl("input", { type: "text", cls: "oxf-multi-input" });
         input.placeholder = options.allowNew ? t("multi.addOrPick") : t("multi.pick");
 
         new ValueSuggest(options.app, input, () => this.available(), (value) => this.add(value));
@@ -104,11 +104,11 @@ export class MultiValueField {
     private renderChips(): void {
         this.chipsEl.empty();
         for (const value of this.values) {
-            const chip = this.chipsEl.createDiv({ cls: "mfl-chip" });
+            const chip = this.chipsEl.createDiv({ cls: "oxf-chip" });
             chip.createSpan({ text: this.labelFor(value) });
 
             const remove = chip.createDiv({
-                cls: "mfl-chip-remove",
+                cls: "oxf-chip-remove",
                 attr: { "aria-label": t("multi.remove") },
             });
             setIcon(remove, "x");

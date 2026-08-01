@@ -15,13 +15,13 @@ const outDir = root;
 
 /**
  * Заодно кладём сборку в хранилище для проверки, чтобы после правки хватало
- * одного Reload. Путь задаётся переменной MFL_VAULT; без неё пробуем соседний
+ * одного Reload. Путь задаётся переменной OXILL_FORMS_VAULT; без неё пробуем соседний
  * test-vault. Копируем, только если папка плагинов там уже есть: у чужого
  * клона хранилища нет, и создавать что-то рядом с чужим проектом нельзя.
  */
 const VAULT_PLUGIN_DIR =
-    process.env.MFL_VAULT ??
-    join(root, "..", "test-vault", ".obsidian", "plugins", "modal-forms-lite");
+    process.env.OXILL_FORMS_VAULT ??
+    join(root, "..", "test-vault", ".obsidian", "plugins", "oxill-forms");
 
 function vaultDir() {
     return existsSync(dirname(VAULT_PLUGIN_DIR)) ? VAULT_PLUGIN_DIR : null;

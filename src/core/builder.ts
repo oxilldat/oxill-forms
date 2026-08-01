@@ -203,7 +203,7 @@ export class FormBuilder {
      */
     build(): FormDefinition {
         const error = validateFields(this.fields);
-        if (error) throw new Error(`Modal Forms Lite: ${error}`);
+        if (error) throw new Error(`Oxill Forms: ${error}`);
 
         const form: FormDefinition = {
             name: this.name,

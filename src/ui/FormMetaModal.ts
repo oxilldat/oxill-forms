@@ -88,11 +88,11 @@ export class FormMetaModal extends Modal {
 
     onOpen(): void {
         const { contentEl, modalEl } = this;
-        modalEl.addClass("mfl-meta-modal");
-        contentEl.addClass("mfl-modal");
+        modalEl.addClass("oxf-meta-modal");
+        contentEl.addClass("oxf-modal");
         contentEl.createEl("h3", {
             text: this.isEditing ? t("meta.editTitle") : t("meta.newTitle"),
-            cls: "mfl-title",
+            cls: "oxf-title",
         });
 
         // Длинные пояснения живут у заголовка группы: там им доступна вся
@@ -216,7 +216,7 @@ export class FormMetaModal extends Modal {
 
         // Не Setting: у строки настроек левая половина отведена под подпись,
         // а подписи здесь нет — поле ютилось бы справа при пустом левом столбце.
-        const area = templateGroup.createEl("textarea", { cls: "mfl-template-input" });
+        const area = templateGroup.createEl("textarea", { cls: "oxf-template-input" });
         area.rows = 10;
         area.placeholder = "---\n{{frontmatter}}\n---\n\n# {{ title }}\n";
         area.value = this.template;
@@ -225,7 +225,7 @@ export class FormMetaModal extends Modal {
         });
         this.templateInput = area;
 
-        this.errorEl = contentEl.createDiv({ cls: "mfl-error" });
+        this.errorEl = contentEl.createDiv({ cls: "oxf-error" });
 
         new Setting(contentEl)
             .addButton((button) => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
@@ -257,7 +257,7 @@ export class FormMetaModal extends Modal {
      * держать в голове не нужно, а опечатка в имени видна только в заметке.
      */
     private renderFieldHints(container: HTMLElement): void {
-        const box = container.createDiv({ cls: "mfl-hints" });
+        const box = container.createDiv({ cls: "oxf-hints" });
         const tokens = [
             "frontmatter",
             ...this.fields.map((field) => field.name),
@@ -265,7 +265,7 @@ export class FormMetaModal extends Modal {
         ];
 
         for (const token of tokens) {
-            const chip = box.createDiv({ cls: "mfl-hint", text: `{{${token}}}` });
+            const chip = box.createDiv({ cls: "oxf-hint", text: `{{${token}}}` });
             chip.addEventListener("click", () => this.insertToken(`{{${token}}}`));
         }
     }
@@ -289,10 +289,10 @@ export class FormMetaModal extends Modal {
         const button = this.iconPreview;
         if (!button) return;
         button.empty();
-        button.addClass("mfl-icon-button");
+        button.addClass("oxf-icon-button");
 
         const icon = this.icon === "" ? DEFAULT_FORM_ICON : this.icon;
-        setIcon(button.createSpan({ cls: "mfl-icon-badge" }), icon);
+        setIcon(button.createSpan({ cls: "oxf-icon-badge" }), icon);
         button.createSpan({ text: icon });
     }
 

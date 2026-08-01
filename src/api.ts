@@ -26,7 +26,7 @@ export interface OpenFormOptions {
  * Публичная поверхность намеренно маленькая — её потом нельзя менять,
  * не сломав чужие скрипты.
  */
-export class ModalFormsApi {
+export class FormsApi {
     constructor(
         private app: App,
         private getSettings: () => PluginSettings,
@@ -37,11 +37,11 @@ export class ModalFormsApi {
      * настройках. Результат `build()` принимает `openForm`.
      *
      * ```js
-     * const form = MFL.builder("book", "Новая книга")
+     * const form = OxillForms.builder("book", "Новая книга")
      *     .text({ name: "title", label: "Название", required: true })
      *     .slider({ name: "rating", label: "Оценка", min: 1, max: 5 })
      *     .build();
-     * const result = await MFL.openForm(form);
+     * const result = await OxillForms.openForm(form);
      * ```
      */
     builder(name: string, title = ""): FormBuilder {
@@ -74,7 +74,7 @@ export class ModalFormsApi {
 
         if (!definition) {
             return Promise.reject(
-                new Error(`Modal Forms Lite: form "${reference as string}" not found`),
+                new Error(`Oxill Forms: form "${reference as string}" not found`),
             );
         }
 

@@ -16,8 +16,8 @@ import type {
     PluginSettings,
 } from "./types";
 
-/** Имя глобальной переменной по умолчанию: window.MFL. */
-export const DEFAULT_GLOBAL_NAME = "MFL";
+/** Имя глобальной переменной по умолчанию: window.OxillForms. */
+export const DEFAULT_GLOBAL_NAME = "OxillForms";
 
 export function defaultSettings(): PluginSettings {
     return {

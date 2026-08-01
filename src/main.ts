@@ -1,5 +1,5 @@
 import { App, Editor, Notice, Plugin, TFile } from "obsidian";
-import { ModalFormsApi } from "./api";
+import { FormsApi } from "./api";
 import { detectLocale, isLocale, setLanguage, t } from "./i18n";
 import { renderNoteFolder, renderNoteName } from "./core/notePath";
 import { extractCursor, renderNote, renderNoteText } from "./core/format";
@@ -24,7 +24,7 @@ import type {
     OutputFormat,
     PluginSettings,
 } from "./core/types";
-import { ModalFormsSettingTab } from "./settings/SettingsTab";
+import { FormsSettingTab } from "./settings/SettingsTab";
 import { FormListModal } from "./ui/FormListModal";
 import { FormMetaModal } from "./ui/FormMetaModal";
 import { FormPickerModal } from "./ui/FormPickerModal";
@@ -55,9 +55,9 @@ function formatResult(result: FormResult, format: OutputFormat): string {
     }
 }
 
-export default class ModalFormsLitePlugin extends Plugin {
+export default class FormsPlugin extends Plugin {
     settings: PluginSettings = defaultSettings();
-    api!: ModalFormsApi;
+    api!: FormsApi;
     /** Имена форм, для которых сейчас зарегистрирована команда. */
     private formCommands = new Set<string>();
     /** Имя, под которым API сейчас лежит в window. */
@@ -81,10 +81,10 @@ export default class ModalFormsLitePlugin extends Plugin {
 
         // Настройки читаем через функцию, а не передаём объект: он
         // пересоздаётся при каждой правке, и захваченная ссылка протухла бы.
-        this.api = new ModalFormsApi(this.app, () => this.settings);
+        this.api = new FormsApi(this.app, () => this.settings);
         this.exposeApi(this.settings.globalName);
 
-        this.addSettingTab(new ModalFormsSettingTab(this.app, this));
+        this.addSettingTab(new FormsSettingTab(this.app, this));
 
         this.addCommand({
             id: "create-form",
@@ -455,7 +455,7 @@ export default class ModalFormsLitePlugin extends Plugin {
             });
             new Notice(t("fill.noteUpdated", { name: file.basename }));
         } catch (error) {
-            console.error("[modal-forms-lite] не удалось обновить шапку", error);
+            console.error("[oxill-forms] не удалось обновить шапку", error);
             new Notice(t("fill.noteUpdateFailed"));
         }
     }
@@ -516,7 +516,7 @@ export default class ModalFormsLitePlugin extends Plugin {
         try {
             return await parseWithTemplater(this.app, text, file);
         } catch (error) {
-            console.error("[modal-forms-lite] Templater не отработал", error);
+            console.error("[oxill-forms] Templater не отработал", error);
             new Notice(t("fill.templaterFailed"));
             return text;
         }
@@ -535,8 +535,12 @@ export default class ModalFormsLitePlugin extends Plugin {
 
         // Шаблон формы важнее готовых форматов: он и написан ради этого.
         let content: string;
+        // Смещение метки {{cursor}}: по нему курсор встанет в открытой заметке.
+        let cursor: number | undefined;
         if (form.template) {
-            content = renderNote(form.template, result.getData(), result.asFrontmatter()).text;
+            const rendered = renderNote(form.template, result.getData(), result.asFrontmatter());
+            content = rendered.text;
+            cursor = rendered.cursor;
         } else {
             const body = formatResult(result, command.format);
             content =
@@ -554,15 +558,19 @@ export default class ModalFormsLitePlugin extends Plugin {
             if (this.templaterReady(content)) {
                 try {
                     await runTemplaterOnFile(this.app, file);
+                    // Templater переписал файл, и наше смещение указывает уже
+                    // не туда. Лучше не двигать курсор вовсе, чем поставить
+                    // его посреди чужого слова.
+                    cursor = undefined;
                 } catch (error) {
-                    console.error("[modal-forms-lite] Templater не отработал", error);
+                    console.error("[oxill-forms] Templater не отработал", error);
                     new Notice(t("fill.templaterFailed"));
                 }
             }
 
-            await this.openCreated(file, command.openIn ?? "current");
+            await this.openCreated(file, command.openIn ?? "current", cursor);
         } catch (error) {
-            console.error("[modal-forms-lite] не удалось создать заметку", error);
+            console.error("[oxill-forms] не удалось создать заметку", error);
             new Notice(t("settings.noteFailed"));
         }
     }
@@ -571,7 +579,7 @@ export default class ModalFormsLitePlugin extends Plugin {
      * Показывает созданную заметку. «Не открывать» нужно серийному вводу —
      * но тогда обязательно сообщение: иначе непонятно, случилось ли что-нибудь.
      */
-    private async openCreated(file: TFile, openIn: OpenMode): Promise<void> {
+    private async openCreated(file: TFile, openIn: OpenMode, cursor?: number): Promise<void> {
         if (openIn === "none") {
             new Notice(t("fill.noteCreated", { name: file.basename }));
             return;
@@ -583,6 +591,12 @@ export default class ModalFormsLitePlugin extends Plugin {
                 : this.app.workspace.getLeaf(openIn === "tab" ? "tab" : false);
 
         await leaf.openFile(file);
+
+        // Метка {{cursor}} обещана и здесь, а не только при вставке в открытую
+        // заметку: обещание в подсказке к шаблону одно на оба случая.
+        if (cursor === undefined) return;
+        const editor = this.app.workspace.activeEditor?.editor;
+        editor?.setCursor(editor.offsetToPos(cursor));
     }
 
     /**

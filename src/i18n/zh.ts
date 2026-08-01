@@ -111,7 +111,7 @@ export const zh: Record<TranslationKey, string> = {
     "settings.exportNote": "到笔记",
     "settings.exportedCount": "已复制表单：{count}",
     "settings.exportNoteTitle": "表单 {date}",
-    "settings.exportNoteBody": "# Modal Forms Lite 表单\n\n导出于 {date}。",
+    "settings.exportNoteBody": "# 表单\n\n导出于 {date}。",
     "settings.noteFailed": "无法创建笔记。详情见控制台",
 
     "settings.languageGroup": "语言",

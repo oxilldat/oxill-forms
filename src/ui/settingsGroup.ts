@@ -12,7 +12,7 @@ import { Setting } from "obsidian";
  *     :where(:not(.setting-group *)) { padding: var(--size-4-4) 0 }
  *
  * сносит строкам боковые отступы. Вес у него (0,4,0), у любого нашего
- * `.mfl-settings-group .setting-item` — (0,2,0), и порядок загрузки не
+ * `.oxf-settings-group .setting-item` — (0,2,0), и порядок загрузки не
  * спасает. Хвост `:where(:not(.setting-group *))` — оставленная дверь: всё,
  * что лежит внутри `.setting-group`, из-под правила выходит. Поэтому и
  * разметка чужая, и `!important` в стилях не нужен.
@@ -24,7 +24,7 @@ export function settingsGroup(
     name: string,
     description?: string,
 ): HTMLElement {
-    const group = container.createDiv({ cls: "setting-group mfl-settings-group" });
+    const group = container.createDiv({ cls: "setting-group oxf-settings-group" });
     // Заголовок лежит в группе, но выше карточки: снаружи её рисует сам
     // Obsidian, выравнивая по тем же отступам, что и строки внутри.
     const heading = new Setting(group).setName(name).setHeading();
@@ -37,6 +37,6 @@ export function settingsGroup(
  * содержимому, а подпись над каждой парой строк только дробила бы окно.
  */
 export function plainGroup(container: HTMLElement): HTMLElement {
-    const group = container.createDiv({ cls: "setting-group mfl-settings-group" });
+    const group = container.createDiv({ cls: "setting-group oxf-settings-group" });
     return group.createDiv({ cls: "setting-items" });
 }

@@ -28,17 +28,17 @@ export class ConfirmModal extends Modal {
 
     onOpen(): void {
         const { contentEl, modalEl } = this;
-        modalEl.addClass("mfl-confirm-modal");
-        contentEl.addClass("mfl-modal");
+        modalEl.addClass("oxf-confirm-modal");
+        contentEl.addClass("oxf-modal");
 
-        const head = contentEl.createDiv({ cls: "mfl-confirm-head" });
+        const head = contentEl.createDiv({ cls: "oxf-confirm-head" });
         if (this.options.icon) {
-            const icon = head.createDiv({ cls: "mfl-confirm-icon" });
+            const icon = head.createDiv({ cls: "oxf-confirm-icon" });
             setIcon(icon, this.options.icon);
         }
-        head.createEl("h3", { text: this.options.title, cls: "mfl-title" });
+        head.createEl("h3", { text: this.options.title, cls: "oxf-title" });
 
-        contentEl.createDiv({ cls: "mfl-confirm-text", text: this.options.message });
+        contentEl.createDiv({ cls: "oxf-confirm-text", text: this.options.message });
 
         new Setting(contentEl)
             .addButton((button) =>

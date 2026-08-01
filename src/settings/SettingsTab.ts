@@ -9,19 +9,19 @@ import { isTemplaterAvailable } from "../core/templater";
 import { createNote } from "../core/vault";
 import { applyNoteUpdates, scanNotes } from "../core/noteMigration";
 import type { NoteUpdate } from "../core/noteMigration";
-import type ModalFormsLitePlugin from "../main";
+import type FormsPlugin from "../main";
 import { FolderSuggest } from "../ui/FolderSuggest";
 import { FormListModal } from "../ui/FormListModal";
 import { ImportFormModal } from "../ui/ImportFormModal";
 import { settingsGroup } from "../ui/settingsGroup";
 
-export class ModalFormsSettingTab extends PluginSettingTab {
+export class FormsSettingTab extends PluginSettingTab {
     /** Результат последнего сканирования: null — ещё не искали. */
     private found: NoteUpdate[] | null = null;
 
     constructor(
         app: App,
-        private plugin: ModalFormsLitePlugin,
+        private plugin: FormsPlugin,
     ) {
         super(app, plugin);
     }
@@ -233,7 +233,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                     );
                     new Notice(t("settings.exportedCount", { count: forms.length }));
                 } catch (error) {
-                    console.error("[modal-forms-lite] не удалось скопировать формы", error);
+                    console.error("[oxill-forms] не удалось скопировать формы", error);
                     new Notice(t("browser.clipboardFailed"));
                 }
             }),
@@ -254,7 +254,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                 );
                     await this.app.workspace.getLeaf(false).openFile(file);
                 } catch (error) {
-                    console.error("[modal-forms-lite] не удалось создать заметку", error);
+                    console.error("[oxill-forms] не удалось создать заметку", error);
                     new Notice(t("settings.noteFailed"));
                 }
             }),
@@ -286,7 +286,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                     }),
             );
 
-        if (!available) setting.setClass("mfl-setting-disabled");
+        if (!available) setting.setClass("oxf-setting-disabled");
     }
 
     /**
@@ -340,7 +340,7 @@ export class ModalFormsSettingTab extends PluginSettingTab {
                     }),
             );
 
-        if (!available) setting.setClass("mfl-setting-disabled");
+        if (!available) setting.setClass("oxf-setting-disabled");
     }
 
     /**

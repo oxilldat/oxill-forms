@@ -112,7 +112,7 @@ export const fr: Record<TranslationKey, string> = {
     "settings.exportNote": "Vers une note",
     "settings.exportedCount": "Formulaires copiés : {count}",
     "settings.exportNoteTitle": "Formulaires {date}",
-    "settings.exportNoteBody": "# Formulaires Modal Forms Lite\n\nExport du {date}.",
+    "settings.exportNoteBody": "# Formulaires\n\nExport du {date}.",
     "settings.noteFailed": "Impossible de créer la note. Détails dans la console",
 
     "settings.languageGroup": "Langue",

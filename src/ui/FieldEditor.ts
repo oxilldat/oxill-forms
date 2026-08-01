@@ -73,7 +73,7 @@ export class FieldEditor {
 
         // Обёртки перерисовки объявлены стопкой: карточки внутри них должны
         // стоять с тем же зазором, что и карточки самого тела поля.
-        this.bodyEl = container.createDiv({ cls: "mfl-stack" });
+        this.bodyEl = container.createDiv({ cls: "oxf-stack" });
         this.renderBody();
     }
 
@@ -167,7 +167,7 @@ export class FieldEditor {
 
             // Регулярное выражение, а не список имён: служебные теги обычно
             // растут ветками, и «^archive/» отсекает ветку целиком.
-            const warning = container.createDiv({ cls: "mfl-warning" });
+            const warning = container.createDiv({ cls: "oxf-warning" });
             const check = (pattern: string): void => {
                 warning.setText(
                     isValidPattern(pattern) ? "" : t("field.patternBroken"),
@@ -254,7 +254,7 @@ export class FieldEditor {
                 return;
             }
 
-            const list = container.createDiv({ cls: "mfl-options" });
+            const list = container.createDiv({ cls: "oxf-options" });
             input.options.forEach((option, index) => {
                 this.renderSelectOption(list, input.options, option, index);
             });
@@ -382,12 +382,12 @@ export class FieldEditor {
         // У типов без своих настроек карточку не заводим — она была бы пустой.
         this.optionsEl = this.hasTypeOptions()
             ? plainGroup(container)
-            : container.createDiv({ cls: "mfl-stack" });
+            : container.createDiv({ cls: "oxf-stack" });
         this.renderInputOptions();
 
         if (!isSection) this.renderRules(container);
 
-        this.conditionEl = container.createDiv({ cls: "mfl-stack" });
+        this.conditionEl = container.createDiv({ cls: "oxf-stack" });
         this.renderCondition();
     }
 
@@ -452,7 +452,7 @@ export class FieldEditor {
 
         const kinds = conditionsFor(dependency.input.type);
 
-        new Setting(container).setClass("mfl-condition").setName(t("field.whenField")).addDropdown(
+        new Setting(container).setClass("oxf-condition").setName(t("field.whenField")).addDropdown(
             (dropdown) => {
                 for (const field of candidates) {
                     dropdown.addOption(field.name, field.label?.trim() || field.name);
@@ -474,7 +474,7 @@ export class FieldEditor {
             },
         );
 
-        new Setting(container).setClass("mfl-condition").setName(t("field.condition")).addDropdown(
+        new Setting(container).setClass("oxf-condition").setName(t("field.condition")).addDropdown(
             (dropdown) => {
                 for (const kind of kinds) {
                     dropdown.addOption(kind, conditionLabel(kind));
@@ -493,7 +493,7 @@ export class FieldEditor {
         const numeric =
             dependency.input.type === "number" || dependency.input.type === "slider";
 
-        new Setting(container).setClass("mfl-condition").setName(t("field.value")).addText((text) => {
+        new Setting(container).setClass("oxf-condition").setName(t("field.value")).addText((text) => {
             if (numeric) text.inputEl.type = "number";
             text.setValue(condition.value === undefined ? "" : String(condition.value)).onChange(
                 (entered) => {
@@ -585,7 +585,7 @@ export class FieldEditor {
 
         // Ошибку самих правил показываем сразу: «минимум больше максимума»
         // всплыло бы иначе только при заполнении формы.
-        const warning = group.createDiv({ cls: "mfl-warning" });
+        const warning = group.createDiv({ cls: "oxf-warning" });
         const check = (): void => warning.setText(checkRules(this.field.rules) ?? "");
         check();
     }
@@ -601,13 +601,13 @@ export class FieldEditor {
     ): void {
         if (!isDataviewAvailable(this.app)) {
             container.createDiv({
-                cls: "mfl-warning",
+                cls: "oxf-warning",
                 text: t("field.dataviewMissing"),
             });
         }
 
         new Setting(container)
-            .setClass("mfl-textarea")
+            .setClass("oxf-textarea")
             .setName(t("field.query"))
             .setDesc(
                 t("field.queryDesc"),
@@ -724,7 +724,7 @@ export class FieldEditor {
         option: SelectOption,
         index: number,
     ): void {
-        const row = new Setting(list).setClass("mfl-option-row");
+        const row = new Setting(list).setClass("oxf-option-row");
         row.addText((text) =>
             text
                 .setPlaceholder(t("field.optionValue"))

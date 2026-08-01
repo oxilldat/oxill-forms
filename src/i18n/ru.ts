@@ -22,7 +22,7 @@ export const ru = {
     "cmd.fillForm": "Заполнить форму…",
     "cmd.fill": "Заполнить: {title}",
     "cmd.noForms": "Форм пока нет — создайте первую",
-    "cmd.needNoteUpdate": "Форма правит шапку заметки — сначала откройте заметку",
+    "cmd.needNoteUpdate": "Форма правит свойства заметки — сначала откройте заметку",
     "cmd.needNoteInsert": "Результат вставляется по месту курсора — сначала откройте заметку",
     "cmd.needEditor": "Команда работает только в открытой заметке",
     "cmd.restartHint": "Команды обновятся в палитре после перезапуска Obsidian",
@@ -49,10 +49,10 @@ export const ru = {
     "type.file": "Файл",
 
     // === Что делает команда и в каком виде выводит ===
-    "mode.update": "Изменить шапку текущей заметки",
+    "mode.update": "Изменить свойства текущей заметки",
     "mode.create": "Создать новую заметку",
     "mode.insert": "Вставить текстом по месту курсора",
-    "format.frontmatter": "YAML в шапке заметки",
+    "format.frontmatter": "YAML в свойствах заметки",
     "format.dataview": "Свойства (ключ:: значение)",
     "format.list": "Маркированный список",
     "open.current": "В текущей вкладке",
@@ -125,7 +125,7 @@ export const ru = {
     "settings.exportNote": "В заметку",
     "settings.exportedCount": "Скопировано форм: {count}",
     "settings.exportNoteTitle": "Формы {date}",
-    "settings.exportNoteBody": "# Формы Modal Forms Lite\n\nЭкспорт от {date}.",
+    "settings.exportNoteBody": "# Формы\n\nЭкспорт от {date}.",
     "settings.noteFailed": "Не удалось создать заметку. Подробности в консоли",
 
     "settings.languageGroup": "Язык",
@@ -165,7 +165,7 @@ export const ru = {
     "settings.notesGroup": "Заметки",
     "settings.autoUpdate": "Автоматически обновлять заметки при изменении формы",
     "settings.autoUpdateDesc":
-        "Если переименовать поле, плагин сразу переименует ключ во frontmatter заметок, созданных этой формой",
+        "Если переименовать поле, плагин сразу переименует его в свойствах заметок, созданных этой формой",
     "settings.scan": "Заметки со старыми полями",
     "settings.scanDesc": "Проверить, остались ли заметки с прежними названиями полей",
     "settings.scanButton": "Сканировать хранилище",
@@ -202,7 +202,7 @@ export const ru = {
     "meta.addCommand": "Добавить команду",
     "meta.templateGroup": "Шаблон заметки",
     "meta.templateGroupDesc":
-        "Вид заметки с подстановками. Пусто — используется формат выше. Особые: {{frontmatter}} — вся шапка разом, {{cursor}} — куда встанет курсор",
+        "Вид заметки с подстановками. Пусто — используется формат выше. Особые: {{frontmatter}} — все свойства разом, {{cursor}} — куда встанет курсор",
     "meta.commandMode": "Что делает",
     "meta.format": "Формат результата",
     "meta.formatDesc": "Только если шаблон пуст",
@@ -334,8 +334,8 @@ export const ru = {
         "Форма заполнена, но не отправлена. Введённые данные будут потеряны — вернитесь и нажмите «Отправить», чтобы их сохранить.",
     "fill.discardConfirm": "Закрыть без отправки",
     "fill.discardCancel": "Вернуться к заполнению",
-    "fill.noteUpdated": "Шапка заметки «{name}» обновлена",
-    "fill.noteUpdateFailed": "Не удалось обновить шапку заметки. Подробности в консоли",
+    "fill.noteUpdated": "Свойства заметки «{name}» обновлены",
+    "fill.noteUpdateFailed": "Не удалось обновить свойства заметки. Подробности в консоли",
     "fill.noteCreated": "Заметка «{name}» создана",
     "fill.templaterFailed": "Templater не смог разобрать шаблон. Подробности в консоли",
 

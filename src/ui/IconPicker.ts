@@ -54,14 +54,14 @@ export class IconPicker {
             this.anchorEl.closest(".vertical-tab-content") ??
             document.body;
 
-        this.pop = host.createDiv({ cls: "mfl-icon-pop" });
+        this.pop = host.createDiv({ cls: "oxf-icon-pop" });
 
         const search = this.pop.createEl("input", {
-            cls: "mfl-icon-search",
+            cls: "oxf-icon-search",
             attr: { type: "text", placeholder: t("icon.search") },
         });
-        this.grid = this.pop.createDiv({ cls: "mfl-icon-grid" });
-        this.note = this.pop.createDiv({ cls: "mfl-icon-note" });
+        this.grid = this.pop.createDiv({ cls: "oxf-icon-grid" });
+        this.note = this.pop.createDiv({ cls: "oxf-icon-note" });
 
         this.renderGrid("");
         this.place();
@@ -140,7 +140,7 @@ export class IconPicker {
 
         for (const id of shown) {
             const cell = grid.createDiv({
-                cls: "mfl-icon-cell",
+                cls: "oxf-icon-cell",
                 attr: { "aria-label": id, role: "button", tabindex: "0" },
             });
             if (id === this.current) cell.addClass("is-active");

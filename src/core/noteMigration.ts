@@ -84,7 +84,7 @@ export async function applyNoteUpdates(
             });
             changed++;
         } catch (error) {
-            console.error("[modal-forms-lite] не удалось обновить заметку", update.file.path, error);
+            console.error("[oxill-forms] не удалось обновить заметку", update.file.path, error);
             failed.push(update.file.path);
         }
     }
