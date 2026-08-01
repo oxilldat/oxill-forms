@@ -43,22 +43,12 @@ export function isLocale(value: unknown): value is Locale {
  * обычным значением: сменил Obsidian язык — плагин своего не меняет, потому
  * что выбор пользователя важнее догадки.
  *
- * Публичного способа узнать язык Obsidian нет, поэтому читаем localStorage,
- * куда он его кладёт, и подстраховываемся языком системы.
+ * Код языка приходит снаружи: узнаёт его `getLanguage()`, а он живёт в
+ * Obsidian, про который этот модуль знать не должен.
  */
-export function detectLocale(): Locale {
-    let raw = "";
-    try {
-        raw = window.localStorage.getItem("language") ?? "";
-    } catch {
-        raw = "";
-    }
-    if (raw === "") {
-        raw = typeof navigator === "undefined" ? "" : (navigator.language ?? "");
-    }
-
+export function detectLocale(appLanguage: string): Locale {
     // У Obsidian китайский бывает «zh» и «zh-TW»; нам хватает одного словаря.
-    const code = raw.toLowerCase().split(/[-_]/)[0] ?? "";
+    const code = appLanguage.toLowerCase().split(/[-_]/)[0] ?? "";
     return isLocale(code) ? code : "en";
 }
 

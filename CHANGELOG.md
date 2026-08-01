@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.2 — 2026-08-01
+
+Meeting the requirements of the Obsidian plugin directory. What the plugin
+does has not changed.
+
+- The settings tab is built from definitions instead of markup, so its
+  settings are found by Obsidian's own settings search. The attachment folders
+  use the built-in folder picker.
+- The plugin language on a fresh install is read through the public
+  `getLanguage()` API rather than the key Obsidian keeps in `localStorage`.
+  It now follows the language of Obsidian: if Obsidian speaks English, so does
+  the plugin, and the language of the system is no longer taken into account.
+- Control characters in the file name patterns are marked as intentional —
+  they arrive from the clipboard and break a name silently.
+
 ## 0.1.1 — 2026-08-01
 
 Fixes from the automated directory review. Nothing changes for the user.

@@ -519,8 +519,23 @@
     resize: vertical;
 }
 
-.oxf-setting-disabled .setting-item-name {
-    color: var(--text-muted);
+/* Пояснение к разделу. У группы описания нет, поэтому это обычная строка без
+   контрола: имя пустое и скрыто, разделитель сверху убран — остаётся текст
+   подписью под заголовком. */
+.oxf-settings-group .oxf-group-note {
+    padding-bottom: 0;
+}
+
+.oxf-settings-group .oxf-group-note::before {
+    content: none;
+}
+
+.oxf-settings-group .oxf-group-note .setting-item-name {
+    display: none;
+}
+
+.oxf-settings-group .oxf-group-note .setting-item-description {
+    margin-top: 0;
 }
 
 /* === Окно подтверждения === */

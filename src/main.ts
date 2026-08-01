@@ -1,4 +1,4 @@
-import { App, Editor, Notice, Plugin, TFile } from "obsidian";
+import { App, Editor, getLanguage, Notice, Plugin, TFile } from "obsidian";
 import { FormsApi } from "./api";
 import { detectLocale, isLocale, setLanguage, t } from "./i18n";
 import { renderNoteFolder, renderNoteName } from "./core/notePath";
@@ -72,7 +72,7 @@ export default class FormsPlugin extends Plugin {
         // берём язык Obsidian — если такой словарь у нас есть. Дальше значение
         // живёт в настройках обычным образом и само меняться не будет.
         if (!hasSavedLanguage(saved)) {
-            this.settings.language = detectLocale();
+            this.settings.language = detectLocale(getLanguage());
             await this.saveSettings();
         }
 
