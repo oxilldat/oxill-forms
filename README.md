@@ -4,6 +4,31 @@ An Obsidian plugin: fill in a window with fields — get a finished note.
 
 [Русская версия](README.ru.md)
 
+![Filling in a form](docs/fill.gif)
+
+## Contents
+
+- [What it looks like](#what-it-looks-like)
+- [Getting started](#getting-started)
+- [What a form does with the answers](#what-a-form-does-with-the-answers)
+- [Naming the note and choosing its folder](#naming-the-note-and-choosing-its-folder)
+- [What ends up inside the note](#what-ends-up-inside-the-note)
+- [Asking less](#asking-less)
+- [Keeping rubbish out of the note](#keeping-rubbish-out-of-the-note)
+- [What you can ask for](#what-you-can-ask-for)
+- [When forms pile up](#when-forms-pile-up)
+- [If a field has to be renamed](#if-a-field-has-to-be-renamed)
+- [Moving to another vault](#moving-to-another-vault)
+- [Neighbouring plugins](#neighbouring-plugins)
+- [From code](#from-code)
+- [Reference](#reference)
+- [Languages](#languages)
+- [Limits](#limits)
+- [Installing](#installing)
+- [Development](#development)
+- [Support](#support)
+- [License](#license)
+
 ## What it looks like
 
 Say you write a note after every meeting: who was there, when, what you
@@ -15,8 +40,6 @@ With this plugin you describe once what to ask about: who you met, when, what
 you decided. From then on you run a command — and a window with those fields
 opens. Fill it in, press Submit, and the note is ready: properties are set,
 the heading is in place, and the cursor sits where you continue writing.
-
-![Filling in a form](docs/fill.gif)
 
 The plugin decides nothing for you: which fields to ask about, where to put
 the note and what to call it — you describe all of that once per kind of note.
@@ -473,6 +496,14 @@ as assembling a note name out of fields that were left empty.
 
 A new language is one file in `src/i18n/`: the dictionary is typed so that a
 missing translation stops the build.
+
+## Support
+
+If you would like to support me and my work, you can subscribe to my social
+media or donate via Boosty:
+
+* [https://t.me/oxilldat](https://t.me/oxilldat)
+* [https://boosty.to/oxilldat](https://boosty.to/oxilldat)
 
 ## License
 
