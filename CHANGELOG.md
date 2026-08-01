@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.1 — 2026-08-01
+
+Fixes from the automated directory review. Nothing changes for the user.
+
+- The icon popup positions itself through `setCssStyles` instead of assigning
+  styles directly.
+- `setWarning` and `setDynamicTooltip` were deprecated in Obsidian 1.13; the
+  first became `setDestructive`, the second is gone — the slider shows its
+  value on its own now.
+- Release assets carry GitHub build provenance, so anyone can verify that
+  `main.js` was built from this repository.
+- The `builtin-modules` dependency is gone: Node lists its own built-ins.
+- Typing and lint cleanups around the values Obsidian hands over as `any`.
+
 ## 0.1.0 — 2026-08-01
 
 First release.

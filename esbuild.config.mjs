@@ -1,5 +1,5 @@
 import esbuild from "esbuild";
-import builtins from "builtin-modules";
+import { builtinModules } from "node:module";
 import { copyFileSync, mkdirSync, existsSync, watch as watchFile } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -76,7 +76,8 @@ const context = await esbuild.context({
         "@lezer/common",
         "@lezer/highlight",
         "@lezer/lr",
-        ...builtins,
+        ...builtinModules,
+        ...builtinModules.map((m) => `node:${m}`),
     ],
     format: "cjs",
     target: "es2022",

@@ -27,7 +27,7 @@ interface PluginRegistry {
     plugins?: { plugins?: Record<string, { api?: unknown } | undefined> };
 }
 
-function dataviewApi(app: App): unknown | undefined {
+function dataviewApi(app: App): unknown {
     return (app as App & PluginRegistry).plugins?.plugins?.["dataview"]?.api;
 }
 
@@ -41,13 +41,13 @@ export function isDataviewAvailable(app: App): boolean {
  * недостаточно — на ней легко споткнуться.
  */
 function toArray(value: unknown): unknown[] | null {
-    if (Array.isArray(value)) return value;
+    if (Array.isArray(value)) return value as unknown[];
     if (value === null || typeof value !== "object") return null;
 
     const asDataArray = value as { array?: unknown };
     if (typeof asDataArray.array === "function") {
         const unwrapped = (asDataArray.array as () => unknown)();
-        if (Array.isArray(unwrapped)) return unwrapped;
+        if (Array.isArray(unwrapped)) return unwrapped as unknown[];
     }
 
     const iterable = value as Iterable<unknown>;

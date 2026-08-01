@@ -10,7 +10,7 @@ interface ConfirmOptions {
     cancelText?: string;
     /** Красная кнопка для необратимых действий. */
     danger?: boolean;
-    onConfirm: () => void;
+    onConfirm: () => void | Promise<void>;
 }
 
 /**
@@ -49,9 +49,9 @@ export class ConfirmModal extends Modal {
             .addButton((button) => {
                 button.setButtonText(this.options.confirmText ?? t("confirm.delete")).onClick(() => {
                     this.close();
-                    this.options.onConfirm();
+                    void this.options.onConfirm();
                 });
-                if (this.options.danger) button.setWarning();
+                if (this.options.danger) button.setDestructive();
                 return button;
             });
     }

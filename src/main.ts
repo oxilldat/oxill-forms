@@ -65,7 +65,7 @@ export default class FormsPlugin extends Plugin {
     private commandRemovalWarned = false;
 
     async onload(): Promise<void> {
-        const saved = await this.loadData();
+        const saved: unknown = await this.loadData();
         this.settings = parseSettings(saved);
 
         // Первый запуск в этом хранилище: язык ещё никто не выбирал, поэтому
@@ -443,7 +443,7 @@ export default class FormsPlugin extends Plugin {
 
         const data = result.getData();
         try {
-            await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+            await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
                 for (const [key, value] of Object.entries(data)) {
                     frontmatter[key] = value;
                 }

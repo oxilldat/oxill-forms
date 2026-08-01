@@ -108,8 +108,7 @@ export class IconPicker {
      */
     private place(): void {
         if (!this.pop) return;
-        this.pop.style.left = "0px";
-        this.pop.style.top = "0px";
+        this.pop.setCssStyles({ left: "0px", top: "0px" });
         const zero = this.pop.getBoundingClientRect();
 
         const r = this.anchorEl.getBoundingClientRect();
@@ -124,8 +123,10 @@ export class IconPicker {
                 ? Math.max(8, r.top - h - 6)
                 : r.bottom + 6;
 
-        this.pop.style.left = `${left - zero.left}px`;
-        this.pop.style.top = `${top - zero.top}px`;
+        this.pop.setCssStyles({
+            left: `${left - zero.left}px`,
+            top: `${top - zero.top}px`,
+        });
     }
 
     private renderGrid(query: string): void {

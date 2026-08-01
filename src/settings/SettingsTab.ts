@@ -359,7 +359,7 @@ export class FormsSettingTab extends PluginSettingTab {
             .addText((text) => {
                 text.setPlaceholder(DEFAULT_GLOBAL_NAME).setValue(current);
 
-                text.inputEl.addEventListener("blur", async () => {
+                text.inputEl.addEventListener("blur", () => void (async () => {
                     const name = text.getValue().trim();
                     if (name === current) return;
 
@@ -378,7 +378,7 @@ export class FormsSettingTab extends PluginSettingTab {
                     this.plugin.exposeApi(wanted);
                     new Notice(t("settings.globalNameSet", { name: wanted }));
                     this.display();
-                });
+                })());
             });
     }
 

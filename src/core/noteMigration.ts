@@ -74,7 +74,7 @@ export async function applyNoteUpdates(
 
     for (const update of updates) {
         try {
-            await app.fileManager.processFrontMatter(update.file, (frontmatter) => {
+            await app.fileManager.processFrontMatter(update.file, (frontmatter: Record<string, unknown>) => {
                 for (const rename of update.renames) {
                     if (!(rename.from in frontmatter)) continue;
                     if (rename.to in frontmatter) continue;

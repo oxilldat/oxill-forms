@@ -7,6 +7,10 @@ on:
 
 permissions:
   contents: write
+  # Нужны, чтобы подписать сборку: по подписи любой может проверить, что
+  # main.js собран именно из этого репозитория, а не подменён по дороге.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -32,6 +36,11 @@ jobs:
           manifest=$(node -p "require('./manifest.json').version")
           echo "tag $tag, manifest $manifest"
           test "$tag" = "$manifest"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "main.js, styles.css"
 
       - name: Create release
         env:

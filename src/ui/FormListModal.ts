@@ -297,7 +297,7 @@ export class FormListModal extends Modal {
             target.removeClass("is-drop-target");
         });
 
-        target.addEventListener("drop", async (event) => {
+        target.addEventListener("drop", (event) => void (async () => {
             event.preventDefault();
             target.removeClass("is-drop-target");
 
@@ -315,7 +315,7 @@ export class FormListModal extends Modal {
                     : t("browser.moved", { title: form.title, folder }),
             );
             this.render();
-        });
+        })());
     }
 
     private renderCard(container: HTMLElement, form: FormDefinition): void {

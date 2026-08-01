@@ -39,7 +39,7 @@ interface FormMetaOptions {
     /** Уже существующие папки — для подсказки, чтобы не плодить опечатки. */
     folders: string[];
     isNameTaken: (name: string) => boolean;
-    onSubmit: (meta: FormMeta) => void;
+    onSubmit: (meta: FormMeta) => void | Promise<void>;
 }
 
 function defaultCommand(): FormCommand {
@@ -399,7 +399,7 @@ export class FormMetaModal extends Modal {
         const folder = this.folder.trim();
         const icon = this.icon.trim();
 
-        this.options.onSubmit({
+        void this.options.onSubmit({
             name,
             title: title === "" ? name : title,
             folder: folder === "" ? undefined : folder,

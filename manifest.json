@@ -1,7 +1,7 @@
 {
     "id": "oxill-forms",
     "name": "Oxill Forms",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "minAppVersion": "1.13.0",
     "description": "Build forms once, then fill them in a modal to create notes, edit note properties or insert text. Speaks six languages.",
     "author": "oxill",

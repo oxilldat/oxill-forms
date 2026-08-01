@@ -223,7 +223,6 @@ export class FormModal extends Modal {
                     slider
                         .setLimits(input.min, input.max, input.step)
                         .setValue(typeof preset === "number" ? preset : input.min)
-                        .setDynamicTooltip()
                         .onChange((value) => this.setValue(field.name, value));
                 });
                 break;
@@ -506,7 +505,7 @@ export class FormModal extends Modal {
         const info = control.createDiv({ cls: "oxf-upload-info" });
         if (preset !== undefined) info.setText(String(preset));
 
-        picker.addEventListener("change", async () => {
+        picker.addEventListener("change", () => void (async () => {
             const file = picker.files?.[0];
             if (!file) return;
 
@@ -552,7 +551,7 @@ export class FormModal extends Modal {
                 info.setText(t("fill.saveFailed"));
                 picker.value = "";
             }
-        });
+        })());
     }
 
     private setValue(name: string, value: FieldValue): void {

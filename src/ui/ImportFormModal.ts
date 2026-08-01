@@ -11,7 +11,7 @@ interface ImportFormOptions {
     isNameTaken: (name: string) => boolean;
     /** Подбирает свободное имя, если предложенное занято. */
     freeName: (base: string) => string;
-    onImport: (forms: FormDefinition[], renamed: string[]) => void;
+    onImport: (forms: FormDefinition[], renamed: string[]) => void | Promise<void>;
 }
 
 /**
@@ -121,7 +121,7 @@ export class ImportFormModal extends Modal {
         });
 
         this.close();
-        this.options.onImport(forms, renamed);
+        void this.options.onImport(forms, renamed);
     }
 
     private showVersionWarning(version: string): void {
