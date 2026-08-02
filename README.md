@@ -469,6 +469,10 @@ change in the settings, and Obsidian is no longer consulted.
 
 ## Installing
 
+**Obsidian 1.13 or newer is required.** On an older version the catalogue
+answers “no appropriate version found” — update Obsidian and the plugin
+installs.
+
 **From the community catalogue**: Settings → Community plugins → Browse →
 find “Oxill Forms” → Install → Enable.
 
