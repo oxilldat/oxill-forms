@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.2.0 — 2026-08-02
+
+Two things you asked for. Nothing that existed before had to change: forms
+made with earlier versions keep working as they did.
+
+### Identifiers take digits and underscores
+
+A field identifier used to be Latin letters and nothing else. Now it starts
+with a letter and goes on with letters, digits and underscores, so the usual
+`date_created` finally fits. The first character stays a letter on purpose —
+an identifier becomes both a JavaScript variable and a YAML key, and neither
+of those may begin with a digit.
+
+### The date goes into the note name
+
+`{{date:FORMAT}}` works everywhere placeholders work: the note name, the
+folder, the note template and a field's default value. The format is
+assembled from `YYYY`, `YY`, `MM`, `DD`, `HH`, `mm` and `ss`, so a note can
+name itself `20260328232135` — fourteen digits, down to the second — or file
+itself under `Diary/{{date:YYYY}}/{{date:MM}}` without a single field in the
+form.
+
+The name, the folder and the text are rendered from one moment in time, so a
+timestamp in the name can't disagree with the same timestamp in the text when
+a second happens to turn over between them.
+
+`{{today}}`, `{{now}}` and `{{datetime}}` are still there — they are now the
+short forms of `{{date:YYYY-MM-DD}}`, `{{date:HH:mm}}` and
+`{{date:YYYY-MM-DDTHH:mm}}`.
+
 ## 0.1.4 — 2026-08-01
 
 More notes from the directory review. Nothing changes for the user.

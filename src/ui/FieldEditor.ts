@@ -16,7 +16,7 @@ import { formatExtensions, parseExtensions } from "../core/extensions";
 import { isValidPattern } from "../core/patterns";
 import { checkRules, hasRules, rulesFor } from "../core/rules";
 import { FolderSuggest } from "./FolderSuggest";
-import { restrictToLatin } from "./restrictToLatin";
+import { restrictToName } from "./restrictToName";
 import { plainGroup } from "./settingsGroup";
 
 interface FieldEditorOptions {
@@ -302,7 +302,7 @@ export class FieldEditor {
                 .setDesc(t("field.nameDesc"))
                 .addText((text) => {
                     text.setPlaceholder("A - z").setValue(this.field.name);
-                    restrictToLatin(text.inputEl, (value) => {
+                    restrictToName(text.inputEl, (value) => {
                         this.field.name = value;
                         this.clearError();
                     });

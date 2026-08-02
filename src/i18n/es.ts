@@ -202,7 +202,7 @@ export const es: Record<TranslationKey, string> = {
     "meta.openIn": "Dónde abrir la nota",
     "meta.openInDesc": "«No abrir» — cuando las notas se crean una tras otra",
     "meta.nameEmpty": "El identificador no puede estar vacío",
-    "meta.nameLatin": "El identificador admite solo letras latinas, sin cifras ni signos",
+    "meta.nameLatin": "El identificador admite letras latinas, cifras y guiones bajos, y empieza por una letra",
     "meta.nameTaken": "El formulario «{name}» ya existe",
     "meta.created": "Formulario «{title}» creado",
 
@@ -379,7 +379,7 @@ export const es: Record<TranslationKey, string> = {
     "rules.badPattern": "La expresión no se puede leer",
 
     "check.nameEmpty": "El identificador no puede estar vacío",
-    "check.nameLatin": "El identificador admite solo letras latinas",
+    "check.nameLatin": "El identificador empieza por una letra, luego letras latinas, cifras y _",
     "check.nameTaken": "El formulario ya tiene un campo con ese identificador",
     "check.noOptions": "No hay ni una sola opción definida",
     "check.noFolder": "No se indicó la carpeta con notas",

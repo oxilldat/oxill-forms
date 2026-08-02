@@ -194,7 +194,7 @@ export const zh: Record<TranslationKey, string> = {
     "meta.openIn": "在哪里打开笔记",
     "meta.openInDesc": "「不打开」——适合连续创建笔记时",
     "meta.nameEmpty": "标识符不能为空",
-    "meta.nameLatin": "标识符只能用拉丁字母，不能有数字、空格和符号",
+    "meta.nameLatin": "标识符可用拉丁字母、数字和下划线，但必须以字母开头",
     "meta.nameTaken": "表单「{name}」已存在",
     "meta.created": "表单「{title}」已创建",
 
@@ -361,7 +361,7 @@ export const zh: Record<TranslationKey, string> = {
     "rules.badPattern": "表达式无法解析",
 
     "check.nameEmpty": "标识符不能为空",
-    "check.nameLatin": "标识符只能用拉丁字母",
+    "check.nameLatin": "标识符以字母开头，之后可用拉丁字母、数字和 _",
     "check.nameTaken": "表单中已有相同标识符的字段",
     "check.noOptions": "一个选项也没有设置",
     "check.noFolder": "未指定笔记所在文件夹",

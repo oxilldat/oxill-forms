@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { defaultValues, formatDate, formatTime, resolveTokens } from "./defaults";
+import { defaultValues } from "./defaults";
 import type { FieldDefinition, InputType } from "./types";
 
 // Фиксированный момент времени: иначе тест зависел бы от часов машины.
@@ -10,28 +10,11 @@ function field(name: string, value: string, input: InputType = { type: "text" })
     return { name, input, default: value };
 }
 
-test("дата и время выводятся с ведущими нулями", () => {
-    assert.equal(formatDate(moment), "2026-07-30");
-    assert.equal(formatTime(moment), "09:05");
-    assert.equal(formatDate(new Date(2026, 0, 3)), "2026-01-03");
-});
-
-test("подстановки понимают пробелы внутри скобок", () => {
-    assert.equal(resolveTokens("{{today}}", moment), "2026-07-30");
-    assert.equal(resolveTokens("{{ today }}", moment), "2026-07-30");
-    assert.equal(resolveTokens("{{now}}", moment), "09:05");
-    assert.equal(resolveTokens("{{datetime}}", moment), "2026-07-30T09:05");
-});
-
-test("подстановка работает внутри текста и несколько раз", () => {
-    assert.equal(
-        resolveTokens("Встреча {{today}} в {{now}}", moment),
-        "Встреча 2026-07-30 в 09:05",
-    );
-});
-
-test("незнакомое остаётся как есть", () => {
-    assert.equal(resolveTokens("{{tomorrow}}", moment), "{{tomorrow}}");
+// Сами подстановки времени проверяются в dates.test.ts; здесь важно только,
+// что значение по умолчанию через них проходит.
+test("значение по умолчанию понимает подстановки времени", () => {
+    assert.deepEqual(defaultValues([field("d", "{{today}}")], moment), { d: "2026-07-30" });
+    assert.deepEqual(defaultValues([field("d", "{{date:YYYY}}")], moment), { d: "2026" });
 });
 
 test("поля без значения по умолчанию пропускаются", () => {

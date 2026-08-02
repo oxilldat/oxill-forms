@@ -20,7 +20,7 @@ import type {
 } from "../core/types";
 import { FolderSuggest } from "./FolderSuggest";
 import { IconPicker } from "./IconPicker";
-import { restrictToLatin } from "./restrictToLatin";
+import { restrictToName } from "./restrictToName";
 import { settingsGroup } from "./settingsGroup";
 import { ValueSuggest } from "./ValueSuggest";
 
@@ -110,7 +110,7 @@ export class FormMetaModal extends Modal {
             .addText((text) => {
                 this.nameInput = text;
                 text.setPlaceholder("A - z").setValue(this.name);
-                restrictToLatin(text.inputEl, (value) => {
+                restrictToName(text.inputEl, (value) => {
                     this.name = value;
                     this.clearError();
                 });

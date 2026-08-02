@@ -52,9 +52,10 @@ export function renderNoteName(
     template: string | undefined,
     data: FormData,
     fallback: string,
+    now = new Date(),
 ): string {
     const source = template?.trim() ?? "";
-    const rendered = source === "" ? "" : renderTemplate(source, data);
+    const rendered = source === "" ? "" : renderTemplate(source, data, now);
     const name = tidy(rendered.replace(FORBIDDEN, "-"));
     return name === "" ? tidy(fallback.replace(FORBIDDEN, "-")) || t("note.unnamed") : name;
 }
@@ -63,11 +64,15 @@ export function renderNoteName(
  * Папка по шаблону. Пустые куски выбрасываем целиком: «Книги/{{genre}}» без
  * жанра должно давать «Книги», а не «Книги/» и не «Книги//Название».
  */
-export function renderNoteFolder(template: string | undefined, data: FormData): string {
+export function renderNoteFolder(
+    template: string | undefined,
+    data: FormData,
+    now = new Date(),
+): string {
     const source = template?.trim() ?? "";
     if (source === "") return "";
 
-    return renderTemplate(source, data)
+    return renderTemplate(source, data, now)
         .replace(FORBIDDEN_IN_PATH, "-")
         .split("/")
         .map((segment) => tidy(segment))

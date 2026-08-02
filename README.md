@@ -105,13 +105,38 @@ from the form: a field name in double curly braces.
 Fill the form in with “Mary Smith” and “2026-08-01”, and a note called
 “Mary Smith — 2026-08-01” appears in the “Meetings” folder.
 
-`person` and `date` are not made up here: they are the short Latin names you
-gave the fields. You can see them in the field list, in the **Identifier**
-row.
+`person` and `date` are not made up here: they are the identifiers you gave
+the fields. You can see them in the field list, in the **Identifier** row.
+They are written in Latin letters and start with a letter; after that digits
+and underscores are allowed: `date_created` and `person2` will do, `2date` and
+“дата” will not.
 
 Folders can be assembled from answers too. `Meetings/{{project}}` files notes
 by project, and when the project is left empty the note lands directly in
 “Meetings” — no empty folder in between.
+
+**The date, right in the name.** It isn't only answers that go into the name
+and the folder — the current time does too, as `{{date:FORMAT}}`.
+
+    Note name:  {{date:YYYYMMDDHHmmss}}
+
+gives you `20260328232135`: year, month, day, hours, minutes, seconds —
+fourteen digits in a row. The format is assembled from letters:
+
+| | |
+| --- | --- |
+| `YYYY` | year, four digits — 2026 |
+| `YY` | year, two digits — 26 |
+| `MM` | month — 03 |
+| `DD` | day — 28 |
+| `HH` | hours, 24-hour — 23 |
+| `mm` | minutes — 21 |
+| `ss` | seconds — 35 |
+
+Anything outside that table stays as written: `{{date:YYYY-MM-DD}}` gives
+`2026-03-28`. Folders are convenient to assemble this way as well —
+`Diary/{{date:YYYY}}/{{date:MM}}` files notes by year and month without a
+single field in the form.
 
 An empty field leaves no litter behind: `{{person}} — {{date}}` without a
 person gives you just the date, not “ — 2026-08-01”.
@@ -176,8 +201,9 @@ writing the note by hand. Three field settings take the surplus away.
 **Default value.** A meeting is almost always today, so let the date fill
 itself in. Field settings have a **Default value** row, and it understands
 three words: `{{today}}` for today’s date, `{{now}}` for the current time,
-`{{datetime}}` for both. The field opens already filled, and you correct it on
-the rare day when the meeting was yesterday.
+`{{datetime}}` for both. It understands `{{date:FORMAT}}` as well — the same
+format as in the note name. The field opens already filled, and you correct it
+on the rare day when the meeting was yesterday.
 
 **Required.** Tick the box and the form will not be submitted while the field
 is empty. For a meeting that is the person: a note without them means nothing.
@@ -421,7 +447,11 @@ notes: `{{ field }}`.
 Special ones: `{{frontmatter}}` — every answer as properties at once,
 `{{cursor}}` — where the cursor lands.
 
-A default value understands `{{today}}`, `{{now}}` and `{{datetime}}`.
+Date and time: `{{date:FORMAT}}`, assembled from the letters `YYYY`, `YY`,
+`MM`, `DD`, `HH`, `mm`, `ss`. It works everywhere placeholders work, including
+a default value. The short forms `{{today}}`, `{{now}}` and `{{datetime}}` are
+still there and equal `{{date:YYYY-MM-DD}}`, `{{date:HH:mm}}` and
+`{{date:YYYY-MM-DDTHH:mm}}`.
 
 Transformations go after a vertical bar — `{{ field | upper }}`:
 

@@ -58,9 +58,11 @@ test("removeFieldAt убирает ровно одно поле", () => {
 
 test("проверка идентификатора поля", () => {
     assert.equal(validateField(field("author"), []), null);
+    assert.equal(validateField(field("author2"), []), null);
+    assert.equal(validateField(field("date_created"), []), null);
     assert.ok(validateField(field(""), []));
     assert.ok(validateField(field("автор"), []));
-    assert.ok(validateField(field("author2"), []));
+    assert.ok(validateField(field("2author"), []));
 });
 
 test("дубликат имени внутри формы не проходит", () => {

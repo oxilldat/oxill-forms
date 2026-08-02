@@ -1,22 +1,33 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { freeNameFrom, isValidName, letterSuffix, stripToLatin } from "./naming";
+import { freeNameFrom, isValidName, letterSuffix, stripToName } from "./naming";
 
-test("isValidName принимает только латинские буквы", () => {
+test("isValidName принимает латиницу, цифры и подчёркивание", () => {
     assert.equal(isValidName("book"), true);
     assert.equal(isValidName("bookTwo"), true);
-    assert.equal(isValidName(""), false);
-    assert.equal(isValidName("книга"), false);
-    assert.equal(isValidName("book2"), false);
-    assert.equal(isValidName("my form"), false);
-    assert.equal(isValidName("my-form"), false);
-    assert.equal(isValidName("my_form"), false);
+    assert.equal(isValidName("book2"), true);
+    assert.equal(isValidName("date_created"), true);
+    assert.equal(isValidName("a_1"), true);
 });
 
-test("stripToLatin вычищает всё лишнее", () => {
-    assert.equal(stripToLatin("book-2"), "book");
-    assert.equal(stripToLatin("моя форма"), "");
-    assert.equal(stripToLatin("a1b2c3"), "abc");
+test("isValidName требует букву первой", () => {
+    // Идентификатор становится и переменной, и ключом YAML: с цифры нельзя
+    // ни там, ни там.
+    assert.equal(isValidName("2date"), false);
+    assert.equal(isValidName("_date"), false);
+    assert.equal(isValidName(""), false);
+    assert.equal(isValidName("книга"), false);
+    assert.equal(isValidName("my form"), false);
+    assert.equal(isValidName("my-form"), false);
+});
+
+test("stripToName вычищает лишнее и снимает цифры в начале", () => {
+    assert.equal(stripToName("book-2"), "book2");
+    assert.equal(stripToName("date created"), "datecreated");
+    assert.equal(stripToName("date_created"), "date_created");
+    assert.equal(stripToName("моя форма"), "");
+    assert.equal(stripToName("2date"), "date");
+    assert.equal(stripToName("_date"), "date");
 });
 
 test("letterSuffix нумерует буквами, а не цифрами", () => {

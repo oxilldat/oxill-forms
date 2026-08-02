@@ -1,4 +1,5 @@
 import type { FieldSelection, FormData } from "./FormResult";
+import { resolveDateTokens } from "./dates";
 import { applyTransform, flatten, isTransformName } from "./transform";
 
 /**
@@ -55,8 +56,9 @@ export function renderNote(
     template: string,
     data: FormData,
     frontmatter: string,
+    now = new Date(),
 ): RenderedNote {
-    return extractCursor(renderNoteText(template, data, frontmatter));
+    return extractCursor(renderNoteText(template, data, frontmatter, now));
 }
 
 /**
@@ -64,9 +66,14 @@ export function renderNote(
  * пройдёт Templater: он меняет длину текста, и посчитанное заранее смещение
  * указывало бы не туда.
  */
-export function renderNoteText(template: string, data: FormData, frontmatter: string): string {
+export function renderNoteText(
+    template: string,
+    data: FormData,
+    frontmatter: string,
+    now = new Date(),
+): string {
     const withFrontmatter = template.replace(/\{\{\s*frontmatter\s*\}\}/g, frontmatter);
-    return renderTemplate(withFrontmatter, data);
+    return renderTemplate(withFrontmatter, data, now);
 }
 
 /** Вырезает метку курсора и запоминает, где она стояла. */
@@ -84,9 +91,14 @@ export function extractCursor(rendered: string): RenderedNote {
  * Подстановка в шаблон: `{{ ключ }}` или `{{ ключ | преобразование }}`.
  * Неизвестный ключ и неизвестное преобразование оставляют шаблон нетронутым —
  * так опечатка сразу видна в тексте, а не превращается в пустое место.
+ *
+ * Время подставляется первым: формат в `{{date:YYYY-MM-DD}}` содержит дефисы
+ * и двоеточия, под ключ поля он не подходит и был бы принят за опечатку.
+ * Момент времени приходит снаружи — имя заметки, папка и текст должны
+ * сойтись до секунды, а рисуются они по очереди.
  */
-export function renderTemplate(template: string, data: FormData): string {
-    return template.replace(
+export function renderTemplate(template: string, data: FormData, now = new Date()): string {
+    return resolveDateTokens(template, now).replace(
         /\{\{\s*(\w+)\s*(?:\|\s*(\w+)\s*)?\}\}/g,
         (match, key: string, transform?: string) => {
             const value = data[key];

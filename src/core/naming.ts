@@ -1,10 +1,14 @@
 /**
  * Правила именования. Идентификаторы форм и полей попадают в пользовательский
- * код (`openForm("book")`, `{{ author }}`), поэтому набор символов намеренно
- * узкий: только латинские буквы, без цифр и разделителей.
+ * код (`openForm("book")`, `{{ date_created }}`) и в свойства заметок, поэтому
+ * набор символов узкий: латиница, цифры и подчёркивание.
+ *
+ * Первым символом — только буква. Имя, начинающееся с цифры, не годится ни в
+ * переменную JavaScript, ни в ключ YAML без кавычек, а идентификатор
+ * оказывается и там, и там.
  */
 
-export const NAME_PATTERN = /^[A-Za-z]+$/;
+export const NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
 export function isValidName(name: string): boolean {
     return NAME_PATTERN.test(name);
@@ -21,14 +25,19 @@ export function isValidGlobalName(name: string): boolean {
     return GLOBAL_NAME_PATTERN.test(name);
 }
 
-/** Вычищает из строки всё, что не является латинской буквой. */
-export function stripToLatin(value: string): string {
-    return value.replace(/[^A-Za-z]/g, "");
+/**
+ * Вычищает всё, чего в идентификаторе быть не может, и снимает цифры и
+ * подчёркивания в начале: они допустимы, но не первым символом, и оставлять
+ * их до полной проверки значило бы показывать человеку заведомо негодное имя.
+ */
+export function stripToName(value: string): string {
+    return value.replace(/[^A-Za-z0-9_]/g, "").replace(/^[0-9_]+/, "");
 }
 
 /**
  * Суффикс-счётчик из букв: 1 → A, 2 → B, 26 → Z, 27 → AA.
- * Цифры использовать нельзя, поэтому нумеруем алфавитом.
+ * Цифры в имени теперь допустимы, но буквенный суффикс нагляднее: «bookA»
+ * читается копией «book», а «book2» — самостоятельным именем.
  */
 export function letterSuffix(index: number): string {
     let rest = index;

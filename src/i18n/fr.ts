@@ -201,7 +201,7 @@ export const fr: Record<TranslationKey, string> = {
     "meta.openIn": "Où ouvrir la note",
     "meta.openInDesc": "« Ne pas ouvrir » — quand les notes se créent l’une après l’autre",
     "meta.nameEmpty": "L’identifiant ne peut pas être vide",
-    "meta.nameLatin": "L’identifiant n’accepte que des lettres latines, sans chiffres ni signes",
+    "meta.nameLatin": "L’identifiant accepte lettres latines, chiffres et tirets bas, et commence par une lettre",
     "meta.nameTaken": "Le formulaire « {name} » existe déjà",
     "meta.created": "Formulaire « {title} » créé",
 
@@ -379,7 +379,7 @@ export const fr: Record<TranslationKey, string> = {
     "rules.badPattern": "L’expression ne se lit pas",
 
     "check.nameEmpty": "L’identifiant ne peut pas être vide",
-    "check.nameLatin": "L’identifiant n’accepte que des lettres latines",
+    "check.nameLatin": "L’identifiant commence par une lettre, puis lettres latines, chiffres et _",
     "check.nameTaken": "Le formulaire a déjà un champ avec cet identifiant",
     "check.noOptions": "Aucune option n’est définie",
     "check.noFolder": "Le dossier de notes n’est pas indiqué",

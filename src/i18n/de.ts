@@ -201,7 +201,7 @@ export const de: Record<TranslationKey, string> = {
     "meta.openIn": "Wo die Notiz geöffnet wird",
     "meta.openInDesc": "„Nicht öffnen“ — wenn Notizen eine nach der anderen entstehen",
     "meta.nameEmpty": "Der Bezeichner darf nicht leer sein",
-    "meta.nameLatin": "Der Bezeichner nimmt nur lateinische Buchstaben, keine Ziffern oder Zeichen",
+    "meta.nameLatin": "Der Bezeichner nimmt lateinische Buchstaben, Ziffern und Unterstriche und beginnt mit einem Buchstaben",
     "meta.nameTaken": "Formular „{name}“ gibt es bereits",
     "meta.created": "Formular „{title}“ erstellt",
 
@@ -381,7 +381,7 @@ export const de: Record<TranslationKey, string> = {
     "rules.badPattern": "Der Ausdruck lässt sich nicht lesen",
 
     "check.nameEmpty": "Der Bezeichner darf nicht leer sein",
-    "check.nameLatin": "Der Bezeichner nimmt nur lateinische Buchstaben",
+    "check.nameLatin": "Der Bezeichner beginnt mit einem Buchstaben, dann Buchstaben, Ziffern und _",
     "check.nameTaken": "Ein Feld mit diesem Bezeichner gibt es im Formular schon",
     "check.noOptions": "Es ist keine einzige Option gesetzt",
     "check.noFolder": "Der Ordner mit Notizen ist nicht angegeben",

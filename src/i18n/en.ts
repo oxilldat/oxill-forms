@@ -200,7 +200,7 @@ export const en: Record<TranslationKey, string> = {
     "meta.openIn": "Where to open the note",
     "meta.openInDesc": "“Do not open” — for when notes are created one after another",
     "meta.nameEmpty": "The identifier cannot be empty",
-    "meta.nameLatin": "The identifier takes Latin letters only — no digits, spaces or signs",
+    "meta.nameLatin": "The identifier takes Latin letters, digits and underscores, and starts with a letter",
     "meta.nameTaken": "Form “{name}” already exists",
     "meta.created": "Form “{title}” created",
 
@@ -373,7 +373,7 @@ export const en: Record<TranslationKey, string> = {
     "rules.badPattern": "The expression does not parse",
 
     "check.nameEmpty": "The identifier cannot be empty",
-    "check.nameLatin": "The identifier takes Latin letters only",
+    "check.nameLatin": "The identifier starts with a letter, then Latin letters, digits and _",
     "check.nameTaken": "The form already has a field with this identifier",
     "check.noOptions": "Not a single option is set",
     "check.noFolder": "The folder with notes is not set",

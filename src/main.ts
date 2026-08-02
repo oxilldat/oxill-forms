@@ -528,17 +528,26 @@ export default class FormsPlugin extends Plugin {
         if (!result.ok) return;
 
         const data = result.getData();
+        // Момент времени берём один на всю заметку: имя, папка и текст рисуются
+        // по очереди, и на границе секунды {{date:…HHmmss}} в имени разошлось бы
+        // с той же подстановкой в тексте.
+        const now = new Date();
         // Имя и папка — шаблоны с теми же подстановками, что и текст заметки.
         // Заголовок формы остаётся запасным именем: заметка без имени не бывает.
-        const baseName = renderNoteName(command.nameTemplate, data, form.title);
-        const folder = renderNoteFolder(command.folder, data);
+        const baseName = renderNoteName(command.nameTemplate, data, form.title, now);
+        const folder = renderNoteFolder(command.folder, data, now);
 
         // Шаблон формы важнее готовых форматов: он и написан ради этого.
         let content: string;
         // Смещение метки {{cursor}}: по нему курсор встанет в открытой заметке.
         let cursor: number | undefined;
         if (form.template) {
-            const rendered = renderNote(form.template, result.getData(), result.asFrontmatter());
+            const rendered = renderNote(
+                form.template,
+                result.getData(),
+                result.asFrontmatter(),
+                now,
+            );
             content = rendered.text;
             cursor = rendered.cursor;
         } else {
