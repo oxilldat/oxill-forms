@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.1 — 2026-08-07
+
+### The value of a show condition is asked for properly
+
+Setting up a show condition, the **Value** row was always a plain text box, no
+matter which field the condition watched. Against a list you had to recall how
+an option was spelled, against a date — which format to type, and a mistake
+cost you a condition that quietly never matched.
+
+The row now matches the field it watches: a list offers its own options, a
+date, a time and a date-and-time open the matching picker, a note and a folder
+suggest from the vault. Numbers already had their own input and keep it.
+
+“Starts with” and “ends with” still take free text — they look at a piece of a
+string, so there is nothing to pick from whole values.
+
+Changing the watched field now drops a value that no longer fits, instead of
+keeping an option that the new list doesn't have.
+
 ## 0.2.0 — 2026-08-02
 
 Two things you asked for. Nothing that existed before had to change: forms

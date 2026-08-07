@@ -292,6 +292,7 @@ export const ru = {
     "field.showSection": "Показывать раздел",
     "field.showField": "Показывать поле",
     "field.conditionNeedsOthers": "Условие можно задать, когда в форме есть другие поля",
+    "field.conditionNoOptions": "У этого списка ещё нет вариантов",
     "field.sectionConditionDesc": "Скрытый раздел уносит все поля до следующего",
     "field.always": "Всегда",
     "field.conditional": "При условии",

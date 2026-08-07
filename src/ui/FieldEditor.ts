@@ -1,5 +1,10 @@
 import { App, Setting } from "obsidian";
-import { conditionNeedsValue, conditionsFor } from "../core/conditions";
+import {
+    conditionNeedsValue,
+    conditionsFor,
+    conditionValueFits,
+    conditionValueInput,
+} from "../core/conditions";
 import { conditionLabel, inputTypeLabel, INPUT_TYPE_ORDER } from "../core/labels";
 import { isDataviewAvailable } from "../core/dataview";
 import { t } from "../i18n";
@@ -7,6 +12,7 @@ import { defaultInputFor, withSource } from "../core/fields";
 import type {
     ConditionKind,
     EditorContext,
+    FieldCondition,
     FieldDefinition,
     FieldRules,
     InputTypeName,
@@ -16,6 +22,7 @@ import { formatExtensions, parseExtensions } from "../core/extensions";
 import { isValidPattern } from "../core/patterns";
 import { checkRules, hasRules, rulesFor } from "../core/rules";
 import { FolderSuggest } from "./FolderSuggest";
+import { NoteSuggest } from "./NoteSuggest";
 import { restrictToName } from "./restrictToName";
 import { plainGroup } from "./settingsGroup";
 
@@ -468,6 +475,11 @@ export class FieldEditor {
                         condition.kind = allowed[0] ?? "isSet";
                         delete condition.value;
                     }
+                    // Значение тоже могло осиротеть: вариант прежнего списка в
+                    // новом не найдётся, и условие не сработает никогда.
+                    if (!conditionValueFits(next.input, condition.kind, condition.value)) {
+                        delete condition.value;
+                    }
                     this.clearError();
                     this.renderCondition();
                 });
@@ -490,22 +502,73 @@ export class FieldEditor {
 
         if (!conditionNeedsValue(condition.kind)) return;
 
-        const numeric =
-            dependency.input.type === "number" || dependency.input.type === "slider";
+        this.renderConditionValue(container, condition, dependency);
+    }
 
-        new Setting(container).setClass("oxf-condition").setName(t("field.value")).addText((text) => {
-            if (numeric) text.inputEl.type = "number";
-            text.setValue(condition.value === undefined ? "" : String(condition.value)).onChange(
-                (entered) => {
-                    if (numeric) {
-                        const parsed = Number(entered);
-                        condition.value = Number.isFinite(parsed) ? parsed : 0;
-                    } else {
-                        condition.value = entered;
-                    }
-                    this.clearError();
-                },
-            );
+    /**
+     * Строка «Значение». Спрашиваем ровно тем же, чем спрашивает само
+     * поле-зависимость: список — списком, дату — календарём, заметку и папку —
+     * подсказкой из хранилища. Раньше здесь всегда была строка ввода, и вариант
+     * приходилось угадывать вместе с его написанием.
+     */
+    private renderConditionValue(
+        container: HTMLElement,
+        condition: FieldCondition,
+        dependency: FieldDefinition,
+    ): void {
+        const wanted = conditionValueInput(dependency.input, condition.kind);
+        const current = condition.value === undefined ? "" : String(condition.value);
+        const setting = new Setting(container).setClass("oxf-condition").setName(t("field.value"));
+
+        const save = (entered: string): void => {
+            condition.value = wanted.kind === "number" ? Number(entered) || 0 : entered;
+            this.clearError();
+        };
+
+        if (wanted.kind === "options") {
+            setting.addDropdown((dropdown) => {
+                for (const option of wanted.options) {
+                    dropdown.addOption(option.value, option.label.trim() || option.value);
+                }
+                // Список пуст, пока варианты не заведены: показать нечего, и
+                // выбранным окажется несуществующее значение.
+                if (wanted.options.length === 0) {
+                    dropdown.addOption("", t("field.conditionNoOptions"));
+                    dropdown.setDisabled(true);
+                }
+                dropdown.setValue(current).onChange(save);
+            });
+            // Выпадающий список отдаёт значение только по выбору, а условие с
+            // пустым значением не срабатывает: подставляем первый вариант сразу.
+            if (current === "" && wanted.options[0]) save(wanted.options[0].value);
+            return;
+        }
+
+        setting.addText((text) => {
+            switch (wanted.kind) {
+                case "number":
+                    text.inputEl.type = "number";
+                    break;
+                case "date":
+                    text.inputEl.type = "date";
+                    break;
+                case "time":
+                    text.inputEl.type = "time";
+                    break;
+                case "datetime":
+                    text.inputEl.type = "datetime-local";
+                    break;
+                case "note":
+                    new NoteSuggest(this.app, text.inputEl, wanted.folder, save);
+                    break;
+                case "folder":
+                    new FolderSuggest(this.app, text.inputEl, save, wanted.parent);
+                    break;
+                default:
+                    break;
+            }
+
+            text.setValue(current).onChange(save);
         });
     }
 

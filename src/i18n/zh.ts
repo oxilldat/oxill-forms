@@ -266,6 +266,7 @@ export const zh: Record<TranslationKey, string> = {
     "field.showSection": "显示该分节",
     "field.showField": "显示该字段",
     "field.conditionNeedsOthers": "表单中要先有其他字段，才能设置条件",
+    "field.conditionNoOptions": "该列表还没有选项",
     "field.sectionConditionDesc": "隐藏分节会连同其后直到下一分节的所有字段一起隐藏",
     "field.always": "总是",
     "field.conditional": "满足条件时",

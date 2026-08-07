@@ -276,6 +276,7 @@ export const en: Record<TranslationKey, string> = {
     "field.showSection": "Show the section",
     "field.showField": "Show the field",
     "field.conditionNeedsOthers": "A condition needs other fields in the form",
+    "field.conditionNoOptions": "That list has no options yet",
     "field.sectionConditionDesc": "A hidden section takes every field up to the next one with it",
     "field.always": "Always",
     "field.conditional": "On a condition",

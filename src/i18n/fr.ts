@@ -279,6 +279,7 @@ export const fr: Record<TranslationKey, string> = {
     "field.showSection": "Afficher la section",
     "field.showField": "Afficher le champ",
     "field.conditionNeedsOthers": "Une condition demande d’autres champs dans le formulaire",
+    "field.conditionNoOptions": "Cette liste n’a pas encore d’options",
     "field.sectionConditionDesc":
         "Une section masquée emporte tous les champs jusqu’à la suivante",
     "field.always": "Toujours",

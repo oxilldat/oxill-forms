@@ -279,6 +279,7 @@ export const de: Record<TranslationKey, string> = {
     "field.showSection": "Abschnitt zeigen",
     "field.showField": "Feld zeigen",
     "field.conditionNeedsOthers": "Eine Bedingung braucht andere Felder im Formular",
+    "field.conditionNoOptions": "Diese Liste hat noch keine Optionen",
     "field.sectionConditionDesc":
         "Ein verborgener Abschnitt nimmt alle Felder bis zum nächsten mit",
     "field.always": "Immer",

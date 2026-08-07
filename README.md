@@ -216,6 +216,11 @@ A condition reads as a whole sentence: “show the field when `online` is on”.
 You can compare against being filled in, equality, containing text, the start
 and the end of a string, and — for numbers — greater and less.
 
+The value is asked for the same way the field it watches asks for it: a list
+offers its own options, a date and a time open a picker, a note and a folder
+suggest from the vault. No guessing how an option is spelled or how a date is
+formatted.
+
 **Sections.** A field of type **Section** is not a question but a heading
 inside the form. It splits a long form into parts; and if you put a condition
 on the section itself, every field up to the next heading hides with it. That
