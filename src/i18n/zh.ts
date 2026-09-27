@@ -386,4 +386,6 @@ export const zh: Record<TranslationKey, string> = {
     "dataview.emptyQuery": "查询为空",
     "dataview.queryError": "查询出错：{reason}",
     "dataview.notAList": "查询必须返回一个值的列表",
+    "settings.author.title": "喜欢这个插件吗？",
+    "settings.author.body": "支持项目或关注我",
 };

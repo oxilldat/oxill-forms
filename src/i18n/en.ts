@@ -398,4 +398,6 @@ export const en: Record<TranslationKey, string> = {
     "dataview.emptyQuery": "The query is empty",
     "dataview.queryError": "Error in the query: {reason}",
     "dataview.notAList": "The query must return a list of values",
+    "settings.author.title": "Enjoying the plugin?",
+    "settings.author.body": "Support the project or follow me",
 };

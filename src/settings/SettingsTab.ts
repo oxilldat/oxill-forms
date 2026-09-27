@@ -13,6 +13,7 @@ import type { NoteUpdate } from "../core/noteMigration";
 import type FormsPlugin from "../main";
 import { FormListModal } from "../ui/FormListModal";
 import { ImportFormModal } from "../ui/ImportFormModal";
+import authorAvatar from "../../assets/ava.jpg";
 
 /**
  * Вкладка настроек описанием, а не разметкой.
@@ -50,6 +51,7 @@ export class FormsSettingTab extends PluginSettingTab {
             this.attachmentsGroup(),
             this.extraGroup(),
             this.notesGroup(),
+            this.authorCard(),
         ];
     }
 
@@ -145,6 +147,59 @@ export class FormsSettingTab extends PluginSettingTab {
     /** Общая обёртка группы: карточка та же, что и в наших окнах. */
     private group(heading: string, items: SettingDefinition[]): SettingDefinitionGroup {
         return { type: "group", heading, cls: "oxf-settings-group", items };
+    }
+
+    /** Карточка автора завершает настройки и не участвует в поиске. */
+    private authorCard(): SettingDefinition {
+        return {
+            name: "",
+            searchable: false,
+            render: (setting) => {
+                setting.settingEl.empty();
+                setting.setClass("oxf-author-host");
+
+                const card = setting.settingEl.createDiv({ cls: "oxf-author-card" });
+                const top = card.createDiv({ cls: "oxf-author-top" });
+                top.createEl("img", {
+                    cls: "oxf-author-avatar",
+                    attr: { src: authorAvatar, alt: "oxill" },
+                });
+
+                const copy = top.createDiv({ cls: "oxf-author-copy" });
+                copy.createEl("h3", { text: t("settings.author.title") });
+                copy.createEl("p", { text: t("settings.author.body") });
+
+                const links = card.createDiv({ cls: "oxf-social-links" });
+                this.addSocialButton(links, "telegram", "Telegram", "https://t.me/oxilldat",
+                    "M21.7 3.4 18.5 19c-.2 1.1-.9 1.4-1.8.9l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9-8.1c.4-.4-.1-.6-.6-.2L6.1 12.8 1.3 11.3c-1-.3-1-1 .2-1.5L20.3 2.6c.9-.3 1.7.2 1.4.8Z");
+                this.addSocialButton(links, "boosty", "Boosty", "https://boosty.to/oxilldat",
+                    "m13.1 2-3.8 7.4 2.5.1-3.7 6.7 3.4.1L9.7 22c5.5-1.8 9-5.2 9-9.2 0-2.8-1.8-4.8-4.5-5.5L16.6 2h-3.5Zm-.8 17.1 1.2-4.4-2.6-.1 3.4-6.2c1.6.5 2.6 1.8 2.6 3.7 0 2.7-1.7 5-4.6 7Z");
+                this.addSocialButton(links, "youtube", "YouTube", "https://www.youtube.com/@oxilldat",
+                    "M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.6V8.4L15.8 12l-6.2 3.6Z");
+            },
+        };
+    }
+
+    private addSocialButton(
+        parent: HTMLElement,
+        brand: string,
+        label: string,
+        url: string,
+        pathData: string,
+    ): void {
+        const link = parent.createEl("a", {
+            cls: `oxf-social-button is-${brand}`,
+            attr: {
+                href: url,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                "aria-label": label,
+                title: label,
+            },
+        });
+        const svg = createSvg("svg", { attr: { viewBox: "0 0 24 24", "aria-hidden": "true" } });
+        svg.appendChild(createSvg("path", { attr: { d: pathData } }));
+        link.appendChild(svg);
     }
 
     /**

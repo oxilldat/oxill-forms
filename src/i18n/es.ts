@@ -404,4 +404,6 @@ export const es: Record<TranslationKey, string> = {
     "dataview.emptyQuery": "La consulta está vacía",
     "dataview.queryError": "Error en la consulta: {reason}",
     "dataview.notAList": "La consulta debe devolver una lista de valores",
+    "settings.author.title": "¿Te gusta el plugin?",
+    "settings.author.body": "Apoya el proyecto o sígueme",
 };

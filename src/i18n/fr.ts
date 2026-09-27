@@ -404,4 +404,6 @@ export const fr: Record<TranslationKey, string> = {
     "dataview.emptyQuery": "La requête est vide",
     "dataview.queryError": "Erreur dans la requête : {reason}",
     "dataview.notAList": "La requête doit renvoyer une liste de valeurs",
+    "settings.author.title": "Vous aimez le plugin ?",
+    "settings.author.body": "Soutenez le projet ou suivez-moi",
 };

@@ -549,6 +549,78 @@
     content: none;
 }
 
+/* === Карточка автора === */
+
+.vertical-tab-content-container .setting-group .setting-item.oxf-author-host {
+    display: block;
+    padding: 0;
+    border: 0;
+    margin: 0;
+    min-height: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.vertical-tab-content-container .setting-group .setting-item.oxf-author-host::before {
+    content: none;
+}
+
+.oxf-author-card {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 32px;
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--background-secondary);
+}
+
+.oxf-author-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.oxf-author-avatar {
+    width: 50px;
+    height: 50px;
+    flex: 0 0 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.oxf-author-copy { min-width: 0; }
+.oxf-author-copy h3 { margin: 0 0 3px; padding: 0; font-size: var(--font-ui-medium); }
+.oxf-author-copy p { margin: 0; color: var(--text-muted); line-height: 1.45; }
+.oxf-social-links { display: flex; flex: 0 0 auto; gap: 8px; }
+
+.oxf-author-card a.oxf-social-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    color: #fff;
+    text-decoration: none;
+    transition: filter 120ms ease, opacity 120ms ease;
+}
+
+.oxf-social-button:hover { filter: brightness(1.12); }
+.oxf-social-button:active { opacity: .82; }
+.oxf-social-button.is-telegram { background: #229ed9; }
+.oxf-social-button.is-boosty { background: #f15f2c; }
+.oxf-social-button.is-youtube { background: #f00; }
+.oxf-social-button svg { width: 23px; height: 23px; fill: currentColor; }
+
+@media (max-width: 700px) {
+    .oxf-author-card { align-items: flex-start; flex-direction: column; }
+    .oxf-social-links { margin-left: 64px; }
+}
+
 /* === Окно подтверждения === */
 
 .oxf-confirm-modal {

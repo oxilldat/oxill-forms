@@ -80,6 +80,7 @@ const context = await esbuild.context({
         ...builtinModules.map((m) => `node:${m}`),
     ],
     format: "cjs",
+    loader: { ".jpg": "dataurl" },
     target: "es2022",
     // Иначе esbuild экранирует кириллицу в \uXXXX и бандл нечитаем при отладке.
     charset: "utf8",

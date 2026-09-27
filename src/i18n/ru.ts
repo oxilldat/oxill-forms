@@ -419,6 +419,8 @@ export const ru = {
     "dataview.emptyQuery": "Запрос пустой",
     "dataview.queryError": "Ошибка в запросе: {reason}",
     "dataview.notAList": "Запрос должен вернуть список значений",
+    "settings.author.title": "Нравится плагин?",
+    "settings.author.body": "Поддержите проект или подпишитесь",
 } as const;
 
 export type TranslationKey = keyof typeof ru;

@@ -406,4 +406,6 @@ export const de: Record<TranslationKey, string> = {
     "dataview.emptyQuery": "Die Abfrage ist leer",
     "dataview.queryError": "Fehler in der Abfrage: {reason}",
     "dataview.notAList": "Die Abfrage muss eine Liste von Werten zurückgeben",
+    "settings.author.title": "Gefällt dir das Plugin?",
+    "settings.author.body": "Unterstütze das Projekt oder folge mir",
 };

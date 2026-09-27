@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 — 2026-09-28
+
+- Added an author card to the bottom of the settings page, matching Person
+  Network: avatar and links to Telegram, Boosty and YouTube.
+- Added responsive card layout and translations for every supported language.
+
 ## 0.2.1 — 2026-08-07
 
 ### The value of a show condition is asked for properly
