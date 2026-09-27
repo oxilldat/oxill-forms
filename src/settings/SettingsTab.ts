@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type { SettingDefinition, SettingDefinitionGroup, SettingDefinitionItem } from "obsidian";
 import { isDataviewAvailable } from "../core/dataview";
 import { bundleToJson } from "../core/exchange";
@@ -166,7 +166,7 @@ export class FormsSettingTab extends PluginSettingTab {
                 });
 
                 const copy = top.createDiv({ cls: "oxf-author-copy" });
-                copy.createEl("h3", { text: t("settings.author.title") });
+                new Setting(copy).setName(t("settings.author.title")).setHeading();
                 copy.createEl("p", { text: t("settings.author.body") });
 
                 const links = card.createDiv({ cls: "oxf-social-links" });

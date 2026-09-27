@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3 — 2026-09-28
+
+- The author-card title now uses Obsidian's standard settings heading API for
+  consistent styling and compatibility with the community-plugin review.
+
 ## 0.2.2 — 2026-09-28
 
 - Added an author card to the bottom of the settings page, matching Person
