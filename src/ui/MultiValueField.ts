@@ -46,7 +46,13 @@ export class MultiValueField {
         const input = root.createEl("input", { type: "text", cls: "oxf-multi-input" });
         input.placeholder = options.allowNew ? t("multi.addOrPick") : t("multi.pick");
 
-        new ValueSuggest(options.app, input, () => this.available(), (value) => this.add(value));
+        new ValueSuggest(
+            options.app,
+            input,
+            () => this.available(),
+            (value) => this.add(value),
+            true,
+        );
 
         input.addEventListener("keydown", (event) => {
             if (event.key === "Enter") {

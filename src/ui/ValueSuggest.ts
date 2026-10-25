@@ -12,6 +12,12 @@ export class ValueSuggest extends AbstractInputSuggest<SelectOption> {
         /** Может считаться на месте: список из запроса Dataview заранее неизвестен. */
         private source: () => SelectOption[] | Promise<SelectOption[]>,
         onChoose: (value: string) => void,
+        /**
+         * Открывать подсказки снова после выбора. Нужно полям с несколькими
+         * значениями: иначе следующий вариант приходится выбирать, уведя фокус
+         * из поля и кликнув в него заново.
+         */
+        reopenAfterChoose = false,
     ) {
         super(app, textInputEl);
 
@@ -19,6 +25,16 @@ export class ValueSuggest extends AbstractInputSuggest<SelectOption> {
             this.setValue("");
             onChoose(option.value);
             this.close();
+
+            if (reopenAfterChoose) {
+                // Фокус остаётся в поле, поэтому сама подсказка не откроется:
+                // повторяем то, что делает пользователь руками (уйти и вернуться).
+                window.setTimeout(() => {
+                    textInputEl.blur();
+                    textInputEl.focus();
+                    textInputEl.dispatchEvent(new Event("input"));
+                }, 0);
+            }
         });
     }
 
